@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Hospify</title>
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div class="dashboard-layout">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand"><div class="brand-icon"><i class="fas fa-hospital-symbol"></i></div><span class="brand-text">Hospify<span style="color:var(--primary-light)">.</span></span></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">My Health</div>
+    <a class="nav-item active" id="nav-dashboard" onclick="showSection('dashboard')"><i class="fas fa-gauge-high"></i><span class="nav-label">My Dashboard</span></a>
+    <a class="nav-item" id="nav-appointments" onclick="showSection('appointments')"><i class="fas fa-calendar-check"></i><span class="nav-label">My Appointments</span></a>
+    <a class="nav-item" id="nav-prescriptions" onclick="showSection('prescriptions')"><i class="fas fa-file-prescription"></i><span class="nav-label">Prescriptions</span></a>
+    <a class="nav-item" id="nav-lab" onclick="showSection('lab')"><i class="fas fa-flask"></i><span class="nav-label">Lab Reports</span></a>
+    <div class="nav-section-title">Account</div>
+    <a class="nav-item" id="nav-bills" onclick="showSection('bills')"><i class="fas fa-file-invoice-dollar"></i><span class="nav-label">My Bills</span></a>
+    <a class="nav-item" id="nav-profile" onclick="showSection('profile')"><i class="fas fa-user"></i><span class="nav-label">My Profile</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar"><span class="user-initials">PT</span></div>
+      <div class="user-info"><div class="user-name" id="userFullName">Patient</div><div class="user-role" id="userRole">Patient</div></div>
+    </div>
+  </div>
+</aside>
+<header class="header" id="header">
+  <button class="header-toggle" onclick="Sidebar.toggle()"><i class="fas fa-bars"></i></button>
+  <div style="flex:1;padding:0 20px"><div style="font-weight:700">Patient Portal</div><div style="font-size:.78rem;color:var(--text-muted)" id="ptDate"></div></div>
+  <div class="header-actions">
+    <button class="header-btn" id="themeToggle" onclick="Theme.toggle()"><i class="fas fa-moon"></i></button>
+    <button class="btn btn-primary" onclick="Modal.open('bookApptModal')" style="padding:8px 16px;border-radius:10px"><i class="fas fa-calendar-plus"></i> Book Appointment</button>
+    <button class="header-btn" onclick="Auth.logout()" data-tooltip="Logout" style="color:var(--danger)"><i class="fas fa-sign-out-alt"></i></button>
+  </div>
+</header>
+
+<main class="main-content" id="mainContent">
+  <div class="page-content">
+    <!-- DASHBOARD SECTION -->
+    <div id="section-dashboard" class="page-section">
+    <div style="background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:16px;padding:28px 32px;margin-bottom:24px;color:#fff;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-20px;right:-20px;width:150px;height:150px;background:rgba(255,255,255,.06);border-radius:50%"></div>
+      <div style="position:absolute;bottom:-40px;right:60px;width:100px;height:100px;background:rgba(255,255,255,.04);border-radius:50%"></div>
+      <div style="position:relative">
+        <div style="font-size:.85rem;opacity:.8;margin-bottom:4px">Welcome back,</div>
+        <h2 style="font-size:1.5rem;font-weight:800;margin-bottom:8px" id="welcomeName">Patient</h2>
+        <div style="font-size:.85rem;opacity:.75">MRN: <strong id="ptMrn">—</strong></div>
+        <div style="margin-top:16px;display:flex;gap:16px;flex-wrap:wrap">
+          <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;text-align:center">
+            <div style="font-size:1.4rem;font-weight:800" id="nextApptIn">—</div>
+            <div style="font-size:.75rem;opacity:.8">Days to Next Appt</div>
+          </div>
+          <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;text-align:center">
+            <div style="font-size:1.4rem;font-weight:800" id="totalRx">—</div>
+            <div style="font-size:.75rem;opacity:.8">Prescriptions</div>
+          </div>
+          <div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;text-align:center">
+            <div style="font-size:1.4rem;font-weight:800" id="pendingBills">—</div>
+            <div style="font-size:.75rem;opacity:.8">Pending Bills</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-bottom:24px">
+      <!-- UPCOMING APPOINTMENTS -->
+      <div class="card">
+        <div class="card-header" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-calendar" style="color:var(--primary)"></i><h3 class="card-title">Upcoming Appointments</h3></div>
+          <button class="btn btn-primary btn-sm" onclick="Modal.open('bookApptModal')"><i class="fas fa-plus"></i> Book</button>
+        </div>
+        <div class="card-body" id="upcomingAppts">
+          <div class="empty-state" style="padding:24px"><i class="fas fa-calendar-check"></i><h3>No upcoming appointments</h3><p>Book an appointment with your doctor</p></div>
+        </div>
+      </div>
+
+      <!-- RECENT PRESCRIPTIONS -->
+      <div class="card">
+        <div class="card-header"><i class="fas fa-file-prescription" style="color:var(--accent)"></i><h3 class="card-title">Recent Prescriptions</h3></div>
+        <div class="card-body" id="recentRx">
+          <div class="empty-state" style="padding:24px"><i class="fas fa-file-prescription"></i><h3>No prescriptions</h3><p>Your prescriptions will appear here</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <!-- LAB REPORTS -->
+      <div class="card">
+        <div class="card-header"><i class="fas fa-flask" style="color:var(--secondary)"></i><h3 class="card-title">Lab Reports</h3></div>
+        <div class="card-body" id="labReports">
+          <div class="empty-state" style="padding:24px"><i class="fas fa-flask"></i><h3>No lab reports</h3><p>Your lab results will appear here</p></div>
+        </div>
+      </div>
+
+      <!-- BILLS -->
+      <div class="card">
+        <div class="card-header"><i class="fas fa-file-invoice-dollar" style="color:var(--warning)"></i><h3 class="card-title">My Bills</h3></div>
+        <div class="card-body" id="myBills">
+          <div class="empty-state" style="padding:24px"><i class="fas fa-file-invoice-dollar"></i><h3>No bills</h3><p>Your billing history will appear here</p></div>
+        </div>
+      </div>
+    </div>
+    </div> <!-- END DASHBOARD SECTION -->
+
+    <!-- APPOINTMENTS SECTION -->
+    <div id="section-appointments" class="page-section" style="display:none">
+      <div class="page-header">
+        <div><h1 class="page-title">My <span class="text-gradient">Appointments</span></h1><div class="page-subtitle">All your scheduled and past appointments</div></div>
+        <button class="btn btn-primary" onclick="Modal.open('bookApptModal')"><i class="fas fa-calendar-plus"></i> Book Appointment</button>
+      </div>
+      <div class="card">
+        <div class="card-header"><i class="fas fa-calendar-check" style="color:var(--primary)"></i><h3 class="card-title">Appointments</h3></div>
+        <div class="table-container">
+          <table><thead><tr><th>Token</th><th>Doctor</th><th>Date</th><th>Time</th><th>Complaint</th><th>Status</th><th>Fee</th></tr></thead>
+            <tbody id="allApptTable"><tr><td colspan="7" style="text-align:center;padding:32px"><div class="spinner"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRESCRIPTIONS SECTION -->
+    <div id="section-prescriptions" class="page-section" style="display:none">
+      <div class="page-header"><div><h1 class="page-title">My <span class="text-gradient">Prescriptions</span></h1><div class="page-subtitle">Prescriptions written by your doctors</div></div></div>
+      <div class="card">
+        <div class="card-header"><i class="fas fa-file-prescription" style="color:var(--accent)"></i><h3 class="card-title">All Prescriptions</h3></div>
+        <div class="table-container">
+          <table><thead><tr><th>Rx No</th><th>Doctor</th><th>Diagnosis</th><th>Medicines</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="allRxTable"><tr><td colspan="6" style="text-align:center;padding:32px"><div class="spinner"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- LAB REPORTS SECTION -->
+    <div id="section-lab" class="page-section" style="display:none">
+      <div class="page-header"><div><h1 class="page-title"><span class="text-gradient">Lab Reports</span></h1><div class="page-subtitle">Your laboratory test results</div></div></div>
+      <div class="card">
+        <div class="card-header"><i class="fas fa-flask" style="color:var(--secondary)"></i><h3 class="card-title">Lab Reports</h3></div>
+        <div class="table-container">
+          <table><thead><tr><th>Report No</th><th>Tests</th><th>Priority</th><th>Status</th><th>Date</th><th>Action</th></tr></thead>
+            <tbody id="allLabTable"><tr><td colspan="6" style="text-align:center;padding:32px"><div class="spinner"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- BILLS SECTION -->
+    <div id="section-bills" class="page-section" style="display:none">
+      <div class="page-header"><div><h1 class="page-title">My <span class="text-gradient">Bills</span></h1><div class="page-subtitle">Your billing and payment history</div></div></div>
+      <div class="card">
+        <div class="card-header"><i class="fas fa-file-invoice-dollar" style="color:var(--warning)"></i><h3 class="card-title">Invoices</h3></div>
+        <div class="table-container">
+          <table><thead><tr><th>Invoice No</th><th>Type</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th><th>Date</th><th>Action</th></tr></thead>
+            <tbody id="allBillsTable"><tr><td colspan="8" style="text-align:center;padding:32px"><div class="spinner"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFILE SECTION -->
+    <div id="section-profile" class="page-section" style="display:none">
+      <div class="page-header"><div><h1 class="page-title">My <span class="text-gradient">Profile</span></h1></div></div>
+      <div class="card"><div class="card-body" style="padding:30px" id="patientProfileContent"><div class="spinner"></div></div></div>
+    </div>
+
+  </div>
+</main>
+</div>
+
+<!-- BOOK APPOINTMENT MODAL -->
+<div class="modal-overlay" id="bookApptModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-calendar-plus"></i> Book Appointment</h3>
+      <button class="modal-close" onclick="Modal.close('bookApptModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Select Doctor</label>
+        <select class="form-control" id="ptDoctor"><option value="">Loading doctors...</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Preferred Date</label><input type="date" class="form-control" id="ptDate2"></div>
+        <div class="form-group"><label class="form-label">Preferred Time</label><input type="time" class="form-control" id="ptTime"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Reason for Visit</label><textarea class="form-control" id="ptComplaint" rows="3" placeholder="Briefly describe your symptoms or reason..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('bookApptModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="bookAppointment()"><i class="fas fa-calendar-check"></i> Request Appointment</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRESCRIPTION VIEW MODAL (Patient) -->
+<div class="modal-overlay" id="patRxViewModal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-file-prescription"></i> My Prescription <span id="patRxNo" style="font-family:monospace;color:var(--text-muted)"></span></h3>
+      <button class="modal-close" onclick="Modal.close('patRxViewModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="patRxBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('patRxViewModal')">Close</button>
+      <button class="btn btn-primary" onclick="printPrescription()"><i class="fas fa-print"></i> Print</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../js/config.js"></script>
+<script src="../../js/dashboard.js"></script>
+<script>
+document.getElementById('ptDate').textContent = new Date().toLocaleDateString('en-PK',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+document.getElementById('ptDate2').value = new Date().toISOString().split('T')[0];
+
+let currentPatientId = null;
+
+function showSection(section) {
+  document.querySelectorAll('.page-section').forEach(el => el.style.display = 'none');
+  const target = document.getElementById('section-' + section);
+  if (target) target.style.display = 'block';
+  document.querySelectorAll('.sidebar-nav .nav-item').forEach(el => el.classList.remove('active'));
+  const nav = document.getElementById('nav-' + section);
+  if (nav) nav.classList.add('active');
+  if (section === 'appointments') loadAllAppointments();
+  if (section === 'prescriptions') loadAllPrescriptions();
+  if (section === 'lab') loadAllLabReports();
+  if (section === 'bills') loadAllBills();
+  if (section === 'profile') loadPatientProfile();
+}
+
+async function loadAllAppointments() {
+  const data = await API.get('/appointments/');
+  const appts = data?.appointments || [];
+  const tbody = document.getElementById('allApptTable');
+  if (!appts.length) { setTableEmpty('allApptTable', 'No appointments found', 7); return; }
+  tbody.innerHTML = appts.map(a => `<tr>
+    <td><span class="badge badge-primary">#${a.token_no}</span></td>
+    <td style="font-weight:600">${a.doctor_name || 'Doctor #' + a.doctor_id}</td>
+    <td>${Format.date(a.appointment_date)}</td>
+    <td>${Format.time(a.appointment_time)}</td>
+    <td style="font-size:.82rem;max-width:150px;overflow:hidden;text-overflow:ellipsis">${a.chief_complaint || '—'}</td>
+    <td>${Format.badge(a.status)}</td>
+    <td style="font-weight:600">PKR ${Format.number(a.fee || 0)}</td>
+  </tr>`).join('');
+}
+
+async function loadAllPrescriptions() {
+  try {
+    const data = await API.get('/prescriptions/?per_page=100');
+    const prescriptions = data?.prescriptions || [];
+    const tbody = document.getElementById('allRxTable');
+    if (!prescriptions.length) { setTableEmpty('allRxTable', 'No prescriptions found', 7); return; }
+    tbody.innerHTML = prescriptions.map(p => `<tr>
+      <td><code style="font-size:.8rem">${p.prescription_no}</code></td>
+      <td style="font-weight:600">Dr. #${p.doctor_id||'—'}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.diagnosis || '—'}</td>
+      <td style="font-size:.82rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(p.items || []).map(m => m.medicine_name).join(', ') || '—'}</td>
+      <td style="font-size:.82rem">${Format.date(p.created_at)}</td>
+      <td>${p.is_dispensed ? '<span class="badge badge-success">Dispensed</span>' : '<span class="badge badge-warning">Pending</span>'}</td>
+      <td><button class="btn btn-primary btn-sm" onclick="viewPatientPrescription(${p.id})"><i class="fas fa-eye"></i> View</button></td>
+    </tr>`).join('');
+  } catch(e) { console.error('rx', e); }
+}
+
+async function viewPatientPrescription(id) {
+  const res = await API.get('/prescriptions/' + id);
+  if (!res?.success) { Toast.error('Prescription not found'); return; }
+  const rx = res.prescription;
+  document.getElementById('patRxNo').textContent = '#' + (rx.prescription_no||'—');
+  const items = (rx.items||[]).map((it,i) => `<tr>
+    <td>${i+1}</td>
+    <td style="font-weight:600">${it.medicine_name||'—'}</td>
+    <td>${it.dosage||'—'}</td>
+    <td>${it.frequency||'—'}</td>
+    <td>${it.duration||'—'}</td>
+  </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No medicines</td></tr>';
+  document.getElementById('patRxBody').innerHTML = `
+    <div style="background:var(--light-2);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><div style="font-size:.75rem;color:var(--text-muted)">Date</div><div style="font-weight:600">${Format.date(rx.created_at)}</div></div>
+        <div><div style="font-size:.75rem;color:var(--text-muted)">Status</div><div>${rx.is_dispensed?'<span class="badge badge-success">Dispensed</span>':'<span class="badge badge-warning">Pending</span>'}</div></div>
+      </div>
+    </div>
+    ${rx.diagnosis?`<div style="margin-bottom:10px"><strong>Diagnosis:</strong> ${rx.diagnosis}</div>`:''}
+    ${rx.clinical_notes?`<div style="margin-bottom:10px"><strong>Clinical Notes:</strong> ${rx.clinical_notes}</div>`:''}
+    ${rx.advice?`<div style="margin-bottom:10px"><strong>Doctor's Advice:</strong> ${rx.advice}</div>`:''}
+    <h4 style="margin:12px 0 8px">Prescribed Medicines</h4>
+    <div class="table-container">
+      <table>
+        <thead><tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th></tr></thead>
+        <tbody>${items}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:10px;padding:8px 12px;background:rgba(14,165,233,.08);border-left:3px solid var(--primary);border-radius:6px;font-size:.78rem;color:var(--text-muted)"><i class="fas fa-info-circle"></i> Read-only view. Please contact your doctor or pharmacy for any changes.</div>
+  `;
+  Modal.open('patRxViewModal');
+}
+
+async function loadAllLabReports() {
+  const data = await API.get('/lab/reports');
+  const reports = data?.reports || [];
+  const tbody = document.getElementById('allLabTable');
+  if (!reports.length) { setTableEmpty('allLabTable', 'No lab reports found', 6); return; }
+  tbody.innerHTML = reports.map(r => `<tr>
+    <td><code style="font-size:.8rem">${r.report_no || r.id}</code></td>
+    <td style="font-size:.82rem">${(r.items || []).map(i => i.test_name).join(', ') || '—'}</td>
+    <td><span class="badge badge-${r.priority === 'urgent' ? 'danger' : 'info'}">${r.priority || 'routine'}</span></td>
+    <td>${Format.badge(r.status)}</td>
+    <td style="font-size:.82rem">${Format.date(r.created_at)}</td>
+    <td><button class="btn btn-outline btn-sm"><i class="fas fa-download"></i> Download</button></td>
+  </tr>`).join('');
+}
+
+async function loadAllBills() {
+  const data = await API.get('/billing/invoices');
+  const invoices = data?.invoices || [];
+  const tbody = document.getElementById('allBillsTable');
+  if (!invoices.length) { setTableEmpty('allBillsTable', 'No bills found', 8); return; }
+  tbody.innerHTML = invoices.map(inv => `<tr>
+    <td><code style="font-size:.8rem">${inv.invoice_no}</code></td>
+    <td style="font-size:.82rem">${inv.type || '—'}</td>
+    <td>PKR ${Format.number(inv.total_amount)}</td>
+    <td>PKR ${Format.number(inv.paid_amount)}</td>
+    <td style="color:${(inv.balance_amount||0)>0?'var(--danger)':'var(--success)'};font-weight:600">PKR ${Format.number(inv.balance_amount||0)}</td>
+    <td>${Format.badge(inv.payment_status || inv.status)}</td>
+    <td style="font-size:.82rem">${Format.date(inv.created_at)}</td>
+    <td>${(inv.balance_amount||0)>0 ? `<button class="btn btn-danger btn-sm" onclick="payBill(${inv.id}, ${inv.balance_amount})"><i class="fas fa-money-bill"></i> Pay</button>` : '<span style="color:var(--success);font-size:.82rem"><i class="fas fa-check"></i> Paid</span>'}</td>
+  </tr>`).join('');
+}
+
+async function loadPatientProfile() {
+  const user = Auth.getUser();
+  const ptRes = await API.get('/patients/me');
+  const pt = ptRes?.patient || {};
+  document.getElementById('patientProfileContent').innerHTML = `
+    <div style="display:flex;align-items:center;gap:24px;margin-bottom:30px">
+      <div style="width:80px;height:80px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:2rem;color:#fff;font-weight:700">${(user?.first_name||'P')[0]}${(user?.last_name||'T')[0]}</div>
+      <div>
+        <div style="font-size:1.4rem;font-weight:700">${user?.first_name||''} ${user?.last_name||''}</div>
+        <div style="color:var(--text-muted)">${user?.email||''}</div>
+        <div style="margin-top:6px"><code>${pt.mrn || '—'}</code> ${Format.badge('patient')}</div>
+      </div>
+    </div>
+    <div class="grid grid-2">
+      <div class="form-group"><label class="form-label">Phone</label><div style="padding:10px;background:var(--light-2);border-radius:8px">${pt.phone||user?.phone||'—'}</div></div>
+      <div class="form-group"><label class="form-label">Blood Group</label><div style="padding:10px;background:var(--light-2);border-radius:8px">${pt.blood_group||'—'}</div></div>
+      <div class="form-group"><label class="form-label">Age</label><div style="padding:10px;background:var(--light-2);border-radius:8px">${pt.age||'—'}</div></div>
+      <div class="form-group"><label class="form-label">City</label><div style="padding:10px;background:var(--light-2);border-radius:8px">${pt.city||'—'}</div></div>
+      ${pt.allergies?`<div class="form-group" style="grid-column:1/-1"><label class="form-label">Allergies</label><div style="padding:10px;background:rgba(239,68,68,.08);border-radius:8px;color:var(--danger)">${pt.allergies}</div></div>`:''}
+    </div>`;
+}
+
+async function loadDoctorsForBooking() {
+  const data = await API.get('/admin/users?role=doctor');
+  const sel = document.getElementById('ptDoctor');
+  const doctors = data?.users || [];
+  if (!doctors.length) { sel.innerHTML = '<option value="">No doctors available</option>'; return; }
+  sel.innerHTML = '<option value="">Choose a doctor...</option>' + doctors.map(d => `<option value="${d.id}">Dr. ${d.first_name} ${d.last_name}</option>`).join('');
+}
+
+async function loadDashboard() {
+  const user = Auth.getUser();
+  if(user){
+    document.getElementById('welcomeName').textContent = `${user.first_name} ${user.last_name}`;
+  }
+
+  // Fetch patient profile
+  const ptRes = await API.get('/patients/me');
+  if (ptRes?.success && ptRes.patient) {
+    currentPatientId = ptRes.patient.id;
+    document.getElementById('ptMrn').textContent = ptRes.patient.mrn || '—';
+  } else {
+    document.getElementById('ptMrn').textContent = '—';
+  }
+
+  // Fetch data concurrently
+  const [apptsRes, rxRes, labRes, invRes] = await Promise.all([
+    API.get('/appointments/'),
+    API.get('/prescriptions/'),
+    API.get('/lab/reports'),
+    API.get('/billing/invoices')
+  ]);
+
+  const appointments = apptsRes?.appointments || [];
+  const prescriptions = rxRes?.prescriptions || [];
+  const labReports = labRes?.reports || [];
+  const invoices = invRes?.invoices || [];
+
+  // Calculate next appointment
+  const upcoming = appointments.filter(a => a.status === 'scheduled');
+  if (upcoming.length > 0) {
+    const nextDate = new Date(upcoming[0].appointment_date);
+    const today = new Date();
+    const diffTime = Math.abs(nextDate - today);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    document.getElementById('nextApptIn').textContent = diffDays;
+  } else {
+    document.getElementById('nextApptIn').textContent = '—';
+  }
+
+  document.getElementById('totalRx').textContent = prescriptions.length;
+  document.getElementById('pendingBills').textContent = invoices.filter(i=>i.payment_status!=='paid').length;
+
+  renderAppointments(appointments);
+  renderPrescriptions(prescriptions);
+  renderLabReports(labReports);
+  renderBills(invoices);
+}
+
+function renderAppointments(appointments) {
+  const el = document.getElementById('upcomingAppts');
+  if(!appointments || !appointments.length){
+    el.innerHTML = '<div class="empty-state" style="padding:24px"><i class="fas fa-calendar-check"></i><h3>No upcoming appointments</h3><p>Book an appointment with your doctor</p></div>';
+    return;
+  }
+  el.innerHTML = appointments.map(a => `
+    <div style="padding:14px;border:1.5px solid var(--light-3);border-radius:12px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:start">
+        <div>
+          <div style="font-weight:700;margin-bottom:4px">Doctor ID: ${a.doctor_id}</div>
+          <div style="font-size:.8rem;color:var(--text-muted)">Token #${a.token_no}</div>
+        </div>
+        ${Format.badge(a.status)}
+      </div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:12px;font-size:.82rem;color:var(--text-muted)">
+        <span><i class="fas fa-calendar" style="margin-right:4px"></i>${Format.date(a.appointment_date)}</span>
+        <span><i class="fas fa-clock" style="margin-right:4px"></i>${Format.time(a.appointment_time)}</span>
+        <span style="margin-left:auto;font-weight:700;color:var(--primary)">PKR ${Format.number(a.fee)}</span>
+      </div>
+    </div>`).join('');
+}
+
+function renderPrescriptions(prescriptions) {
+  const el = document.getElementById('recentRx');
+  if(!prescriptions || !prescriptions.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:24px"><i class="fas fa-file-prescription"></i><h3>No prescriptions</h3><p>Your prescriptions will appear here</p></div>';
+    return;
+  }
+  el.innerHTML = prescriptions.map(p => `
+    <div style="padding:14px;border:1.5px solid var(--light-3);border-radius:12px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between">
+        <div><div style="font-weight:700;margin-bottom:2px">${p.diagnosis || 'Diagnosis Pending'}</div>
+        <div style="font-size:.78rem;color:var(--text-muted)"><code>${p.prescription_no}</code></div></div>
+        <div style="font-size:.78rem;color:var(--text-muted)">${Format.date(p.created_at)}</div>
+      </div>
+      <button class="btn btn-outline btn-sm" style="margin-top:10px"><i class="fas fa-download"></i> Download PDF</button>
+    </div>`).join('');
+}
+
+function renderLabReports(labReports) {
+  const el = document.getElementById('labReports');
+  if(!labReports || !labReports.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:24px"><i class="fas fa-flask"></i><h3>No lab reports</h3><p>Your lab results will appear here</p></div>';
+    return;
+  }
+  el.innerHTML = labReports.map(r => `
+    <div style="padding:14px;border:1.5px solid var(--light-3);border-radius:12px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between">
+        <div><code style="font-size:.8rem">${r.report_no}</code>
+        <div style="font-size:.8rem;color:var(--text-muted);margin-top:4px"></div></div>
+        ${Format.badge(r.status)}
+      </div>
+      <div style="margin-top:8px;display:flex;justify-content:space-between;font-size:.82rem">
+        <span style="color:var(--text-muted)">Completed: ${Format.date(r.completed_at)}</span>
+        <button class="btn btn-outline btn-sm"><i class="fas fa-download"></i> Download</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderBills(invoices) {
+  const el = document.getElementById('myBills');
+  if(!invoices || !invoices.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:24px"><i class="fas fa-file-invoice-dollar"></i><h3>No bills</h3><p>Your billing history will appear here</p></div>';
+    return;
+  }
+  el.innerHTML = invoices.map(inv => `
+    <div style="padding:14px;border:1.5px solid ${inv.payment_status!=='paid'?'rgba(239,68,68,.3)':'var(--light-3)'};border-radius:12px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:start">
+        <div><code style="font-size:.78rem">${inv.invoice_no}</code>
+        <div style="font-size:.8rem;color:var(--text-muted)">${inv.type}</div></div>
+        ${Format.badge(inv.payment_status)}
+      </div>
+      <div style="margin-top:8px;display:flex;justify-content:space-between">
+        <span style="font-size:.875rem;font-weight:700">PKR ${Format.number(inv.total_amount)}</span>
+        ${inv.due_amount>0?`<button class="btn btn-danger btn-sm" onclick="payBill(${inv.id}, ${inv.due_amount})"><i class="fas fa-money-bill"></i> Pay PKR ${Format.number(inv.due_amount)}</button>`:'<span style="color:var(--accent);font-size:.82rem"><i class="fas fa-check"></i> Fully Paid</span>'}
+      </div>
+    </div>`).join('');
+}
+
+async function bookAppointment() {
+  const doctorId = document.getElementById('ptDoctor').value;
+  const date = document.getElementById('ptDate2').value;
+  const time = document.getElementById('ptTime').value;
+  const complaint = document.getElementById('ptComplaint').value;
+
+  if(!doctorId || !date || !time){
+    Toast.error('Please fill all required fields');
+    return;
+  }
+
+  if (!currentPatientId) {
+    Toast.error('Patient profile not fully loaded. Try again.');
+    return;
+  }
+
+  const payload = {
+    patient_id: currentPatientId,
+    doctor_id: parseInt(doctorId),
+    appointment_date: date,
+    appointment_time: time,
+    chief_complaint: complaint
+  };
+
+  const res = await API.post('/appointments/', payload);
+  if (res?.success) {
+    Toast.success('Appointment request sent!');
+    Modal.close('bookApptModal');
+    loadDashboard();
+  } else {
+    Toast.error(res?.message || 'Failed to book appointment');
+  }
+}
+
+async function payBill(invoiceId, amount) {
+  const res = await API.post('/billing/invoices/' + invoiceId + '/pay', {
+    amount: amount,
+    payment_method: 'card'
+  });
+  if (res?.success) {
+    Toast.success('Payment successful!');
+    loadDashboard();
+  } else {
+    Toast.error('Payment failed');
+  }
+}
+
+Auth.require();
+loadDashboard();
+loadDoctorsForBooking();
+</script>
+</body>
+</html>

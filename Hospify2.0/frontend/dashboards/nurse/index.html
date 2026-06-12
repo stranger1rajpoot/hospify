@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Hospify</title>
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div class="dashboard-layout">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand"><div class="brand-icon"><i class="fas fa-hospital-symbol"></i></div><span class="brand-text">Hospify<span style="color:var(--primary-light)">.</span></span></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">Nurse Panel</div>
+    <a class="nav-item active" href="#"><i class="fas fa-gauge-high"></i><span class="nav-label">Dashboard</span></a>
+    <a class="nav-item" href="#"><i class="fas fa-heart-pulse"></i><span class="nav-label">Record Vitals</span></a>
+    <a class="nav-item" href="#"><i class="fas fa-notes-medical"></i><span class="nav-label">Care Notes</span></a>
+    <a class="nav-item" href="#"><i class="fas fa-pills"></i><span class="nav-label">Medication</span></a>
+    <div class="nav-section-title">Ward</div>
+    <a class="nav-item" href="#"><i class="fas fa-bed"></i><span class="nav-label">Ward Management</span></a>
+    <a class="nav-item" href="#"><i class="fas fa-triangle-exclamation" style="color:var(--danger)"></i><span class="nav-label">Critical Patients</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar"><span class="user-initials">NR</span></div>
+      <div class="user-info"><div class="user-name" id="userFullName">Nurse</div><div class="user-role" id="userRole">Nurse</div></div>
+    </div>
+  </div>
+</aside>
+<header class="header" id="header">
+  <button class="header-toggle" onclick="Sidebar.toggle()"><i class="fas fa-bars"></i></button>
+  <div style="flex:1;padding:0 20px"><div style="font-weight:700">Nurse Station</div><div style="font-size:.78rem;color:var(--text-muted)" id="nurseDate"></div></div>
+  <div class="header-actions">
+    <button class="header-btn" id="themeToggle" onclick="Theme.toggle()"><i class="fas fa-moon"></i></button>
+    <button class="btn btn-primary" onclick="Modal.open('recordVitalsModal')" style="padding:8px 16px;border-radius:10px"><i class="fas fa-heart-pulse"></i> Record Vitals</button>
+    <button class="header-btn" onclick="Auth.logout()" data-tooltip="Logout" style="color:var(--danger)"><i class="fas fa-sign-out-alt"></i></button>
+  </div>
+</header>
+
+<main class="main-content" id="mainContent">
+  <div class="page-content">
+    <div class="page-header">
+      <div>        <h1 class="page-title">Nurse <span class="text-gradient">Dashboard</span></h1><div class="page-subtitle">Patient vitals, care notes & ward management</div></div>
+    </div>
+
+    <div class="grid grid-4" style="margin-bottom:24px">
+      <div class="stat-card stat-card-animated primary"><div class="stat-icon"><i class="fas fa-bed"></i></div><div class="stat-info"><div class="stat-label">Admitted Patients</div><div class="stat-value">12</div></div></div>
+      <div class="stat-card stat-card-animated danger"><div class="stat-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="stat-info"><div class="stat-label">Critical Patients</div><div class="stat-value">2</div></div></div>
+      <div class="stat-card stat-card-animated warning"><div class="stat-icon"><i class="fas fa-pills"></i></div><div class="stat-info"><div class="stat-label">Medications Due</div><div class="stat-value">5</div></div></div>
+      <div class="stat-card stat-card-animated success"><div class="stat-icon"><i class="fas fa-heart-pulse"></i></div><div class="stat-info"><div class="stat-label">Vitals Recorded</div><div class="stat-value">8</div></div></div>
+    </div>
+
+    <div class="grid grid-2" style="margin-bottom:24px">
+      <!-- PATIENT LIST -->
+      <div class="card">
+        <div class="card-header" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-bed" style="color:var(--primary)"></i><h3 class="card-title">Ward Patients</h3></div>
+          <select class="form-control" style="width:140px"><option>All Wards</option><option>General Ward</option><option>ICU</option><option>Private</option></select>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Patient</th><th>Bed</th><th>Condition</th><th>Last Vitals</th><th>Action</th></tr></thead>
+            <tbody id="wardTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MEDICATION SCHEDULE -->
+      <div class="card">
+        <div class="card-header"><i class="fas fa-pills" style="color:var(--warning)"></i><h3 class="card-title">Medication Schedule</h3></div>
+        <div class="card-body" id="medicationList"></div>
+      </div>
+    </div>
+
+    <!-- VITALS HISTORY -->
+    <div class="card">
+      <div class="card-header" style="justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-heart-pulse" style="color:var(--danger)"></i><h3 class="card-title">Recent Vitals Recorded</h3></div>
+        <button class="btn btn-primary btn-sm" onclick="Modal.open('recordVitalsModal')"><i class="fas fa-plus"></i> Record</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Patient</th><th>Temp (°C)</th><th>Pulse</th><th>BP</th><th>SpO2</th><th>Weight</th><th>Time</th><th>Notes</th></tr></thead>
+          <tbody id="vitalsTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+
+<!-- RECORD VITALS MODAL -->
+<div class="modal-overlay" id="recordVitalsModal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-heart-pulse"></i> Record Patient Vitals</h3>
+      <button class="modal-close" onclick="Modal.close('recordVitalsModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Patient *</label>
+        <select class="form-control" id="vPatient">
+          <option value="">Select patient...</option>
+          <option value="1">Bed A-1 – Fatima Malik</option>
+          <option value="2">Bed A-2 – Ali Hassan</option>
+          <option value="3">ICU-1 – Zara Ahmed (Critical)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Temperature (°C)</label><input type="number" step="0.1" class="form-control" id="vTemp" placeholder="36.5"></div>
+        <div class="form-group"><label class="form-label">Pulse Rate (bpm)</label><input type="number" class="form-control" id="vPulse" placeholder="72"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Systolic BP (mmHg)</label><input type="number" class="form-control" id="vBpSys" placeholder="120"></div>
+        <div class="form-group"><label class="form-label">Diastolic BP (mmHg)</label><input type="number" class="form-control" id="vBpDia" placeholder="80"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">SpO2 (%)</label><input type="number" class="form-control" id="vSpo2" placeholder="98"></div>
+        <div class="form-group"><label class="form-label">Respiratory Rate</label><input type="number" class="form-control" id="vRespRate" placeholder="16"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Weight (kg)</label><input type="number" step="0.1" class="form-control" id="vWeight" placeholder="65.0"></div>
+        <div class="form-group"><label class="form-label">Height (cm)</label><input type="number" class="form-control" id="vHeight" placeholder="170"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-control" id="vNotes" rows="2" placeholder="Patient condition notes..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('recordVitalsModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveVitals()"><i class="fas fa-save"></i> Save Vitals</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../js/config.js"></script>
+<script src="../../js/dashboard.js"></script>
+<script>
+document.getElementById('nurseDate').textContent = new Date().toLocaleDateString('en-PK',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+let wardPatients = [];
+let vitalsHistory = [];
+let medicationsDue = [];
+
+async function loadDashboard() {
+  const statsRes = await API.get('/nurse/stats');
+  const stats = statsRes?.success ? statsRes : {admitted_patients:0, critical_patients:0, medications_due:0, vitals_recorded:0};
+  
+  const statValues = document.querySelectorAll('.stat-value');
+  if (statValues.length >= 4) {
+    statValues[0].textContent = stats.admitted_patients;
+    statValues[1].textContent = stats.critical_patients;
+    statValues[2].textContent = stats.medications_due;
+    statValues[3].textContent = stats.vitals_recorded;
+  }
+
+  const wardRes = await API.get('/nurse/ward');
+  wardPatients = wardRes?.patients || [];
+
+  const vitalsRes = await API.get('/nurse/vitals');
+  vitalsHistory = vitalsRes?.vitals || [];
+
+  document.getElementById('wardTable').innerHTML = wardPatients.map(p => `<tr>
+    <td style="font-weight:600">${p.name}</td>
+    <td><span class="badge badge-secondary">${p.bed}</span></td>
+    <td><span class="badge badge-${p.condition==='critical'?'danger':p.condition==='stable'?'success':'warning'}">${p.condition}</span></td>
+    <td style="font-size:.8rem;color:var(--text-muted)">${p.last_vitals}</td>
+    <td><button class="btn btn-primary btn-sm" onclick="openVitalsModal(${p.id})"><i class="fas fa-heart-pulse"></i></button></td>
+  </tr>`).join('');
+
+  document.getElementById('medicationList').innerHTML = medicationsDue.map(m => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;margin-bottom:8px;background:var(--light-2);${m.done?'opacity:.6':''}">
+      <div style="width:36px;height:36px;border-radius:10px;background:${m.done?'var(--accent)':'var(--warning)'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;flex-shrink:0">
+        <i class="fas fa-${m.done?'check':'clock'}"></i>
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:.875rem">${m.medicine}</div>
+        <div style="font-size:.78rem;color:var(--text-muted)">${m.patient} &bull; ${m.route} &bull; ${m.time}</div>
+      </div>
+      ${!m.done?`<button class="btn btn-success btn-sm" onclick="markDone(this)"><i class="fas fa-check"></i> Done</button>`:`<span class="badge badge-success">Done</span>`}
+    </div>`).join('');
+
+  document.getElementById('vitalsTable').innerHTML = vitalsHistory.map(v => `<tr>
+    <td style="font-weight:600">${v.patient_name||'—'}</td>
+    <td>${v.temperature||'—'}°C</td>
+    <td>${v.pulse||'—'} bpm</td>
+    <td><span style="font-weight:600">${v.bp||'—'}</span></td>
+    <td style="color:${(v.spo2||100)<95?'var(--danger)':'var(--accent)'};font-weight:700">${v.spo2||'—'}%</td>
+    <td>${v.weight||'—'} kg</td>
+    <td style="font-size:.8rem;color:var(--text-muted)">${Format.datetime(v.recorded_at)}</td>
+    <td style="font-size:.8rem;max-width:150px;overflow:hidden;text-overflow:ellipsis">${v.notes||'—'}</td>
+  </tr>`).join('');
+
+  // Populate patient dropdown
+  const pSelect = document.getElementById('vPatient');
+  pSelect.innerHTML = '<option value="">Select patient...</option>' + 
+    wardPatients.map(p => `<option value="${p.id}">${p.name} (Bed: ${p.bed})</option>`).join('');
+}
+
+function markDone(btn) { btn.closest('div[style]').style.opacity='.6'; btn.replaceWith(Object.assign(document.createElement('span'),{className:'badge badge-success',textContent:'Done'})); Toast.success('Medication marked as administered!'); }
+
+function openVitalsModal(patientId) {
+  document.getElementById('vPatient').value = patientId;
+  Modal.open('recordVitalsModal');
+}
+
+async function saveVitals() {
+  const patient_id = document.getElementById('vPatient').value;
+  if(!patient_id){Toast.error('Please select a patient');return;}
+  
+  const payload = {
+    patient_id: parseInt(patient_id),
+    temperature: parseFloat(document.getElementById('vTemp').value) || null,
+    pulse: parseInt(document.getElementById('vPulse').value) || null,
+    bp_sys: parseInt(document.getElementById('vBpSys').value) || null,
+    bp_dia: parseInt(document.getElementById('vBpDia').value) || null,
+    spo2: parseInt(document.getElementById('vSpo2').value) || null,
+    resp_rate: parseInt(document.getElementById('vRespRate').value) || null,
+    weight: parseFloat(document.getElementById('vWeight').value) || null,
+    height: parseFloat(document.getElementById('vHeight').value) || null,
+    notes: document.getElementById('vNotes').value
+  };
+
+  const data = await API.post('/nurse/vitals', payload);
+  if (data?.success) {
+    Toast.success('Vitals recorded successfully!');
+    Modal.close('recordVitalsModal');
+    loadDashboard();
+  } else {
+    Toast.error(data?.message || 'Failed to save vitals');
+  }
+}
+
+Auth.require();
+loadDashboard();
+</script>
+</body>
+</html>
