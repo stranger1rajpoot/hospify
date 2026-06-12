@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Hospify</title>
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .acct-section { display:none; }
+    .acct-section.active { display:block; }
+    .exp-cat-badge { display:inline-block; padding:2px 8px; border-radius:6px; font-size:.72rem; font-weight:600; text-transform:uppercase; }
+    .exp-cat-badge.salary { background:#dbeafe; color:#1e40af; }
+    .exp-cat-badge.utilities { background:#fef3c7; color:#92400e; }
+    .exp-cat-badge.supplies { background:#dcfce7; color:#166534; }
+    .exp-cat-badge.equipment { background:#ede9fe; color:#5b21b6; }
+    .exp-cat-badge.maintenance { background:#fce7f3; color:#9d174d; }
+    .exp-cat-badge.other { background:#e5e7eb; color:#374151; }
+    .payment-row { transition: background .15s; }
+    .payment-row:hover { background: var(--light-2); }
+    .export-card { cursor:pointer; transition: all .2s; }
+    .export-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,.1); }
+  </style>
+</head>
+<body>
+<div class="dashboard-layout">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand"><div class="brand-icon"><i class="fas fa-hospital-symbol"></i></div><span class="brand-text">Hospify<span style="color:var(--primary-light)">.</span></span></div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">Accounts</div>
+    <a class="nav-item active" href="#" onclick="showSection('dashboard', this); return false;"><i class="fas fa-gauge-high"></i><span class="nav-label">Dashboard</span></a>
+    <a class="nav-item" href="#" onclick="showSection('invoices', this); return false;"><i class="fas fa-file-invoice-dollar"></i><span class="nav-label">Invoices</span></a>
+    <a class="nav-item" href="#" onclick="showSection('payments', this); return false;"><i class="fas fa-money-bill-wave"></i><span class="nav-label">Payments</span></a>
+    <a class="nav-item" href="#" onclick="showSection('expenses', this); return false;"><i class="fas fa-receipt"></i><span class="nav-label">Expenses</span></a>
+    <div class="nav-section-title">Reports</div>
+    <a class="nav-item" href="#" onclick="showSection('reports', this); return false;"><i class="fas fa-chart-line"></i><span class="nav-label">Revenue Reports</span></a>
+    <a class="nav-item" href="#" onclick="showSection('export', this); return false;"><i class="fas fa-file-export"></i><span class="nav-label">Export Data</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar"><span class="user-initials">AC</span></div>
+      <div class="user-info"><div class="user-name" id="userFullName">Accountant</div><div class="user-role" id="userRole">Accountant</div></div>
+    </div>
+  </div>
+</aside>
+<header class="header" id="header">
+  <button class="header-toggle" onclick="Sidebar.toggle()"><i class="fas fa-bars"></i></button>
+  <div class="header-search"><i class="fas fa-search"></i><input type="text" placeholder="Search invoices, patients..." oninput="globalSearch(this.value)"></div>
+  <div class="header-actions">
+    <button class="header-btn" id="themeToggle" onclick="Theme.toggle()"><i class="fas fa-moon"></i></button>
+    <button class="btn btn-primary" onclick="Modal.open('createInvoiceModal')" style="padding:8px 16px;border-radius:10px"><i class="fas fa-plus"></i> New Invoice</button>
+    <button class="header-btn" onclick="Auth.logout()" data-tooltip="Logout" style="color:var(--danger)"><i class="fas fa-sign-out-alt"></i></button>
+  </div>
+</header>
+
+<main class="main-content" id="mainContent">
+  <!-- ============ DASHBOARD SECTION ============ -->
+  <div class="page-content acct-section active" id="section-dashboard">
+    <div class="page-header">
+      <div><h1 class="page-title"><span class="text-gradient">Billing & Accounts</span></h1><div class="page-subtitle">Financial management & revenue tracking (PKR)</div></div>
+    </div>
+
+    <div class="grid grid-4" style="margin-bottom:24px">
+      <div class="stat-card stat-card-animated success"><div class="stat-icon"><i class="fas fa-rupee-sign"></i></div><div class="stat-info"><div class="stat-label">Today's Revenue</div><div class="stat-value" id="sTodayRev">—</div><div class="stat-change up"><i class="fas fa-arrow-up"></i> PKR collected</div></div></div>
+      <div class="stat-card stat-card-animated primary"><div class="stat-icon"><i class="fas fa-file-invoice-dollar"></i></div><div class="stat-info"><div class="stat-label">Total Invoices</div><div class="stat-value" id="sTotalInv">—</div></div></div>
+      <div class="stat-card stat-card-animated warning"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-info"><div class="stat-label">Pending Invoices</div><div class="stat-value" id="sPending">—</div></div></div>
+      <div class="stat-card stat-card-animated danger"><div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div><div class="stat-info"><div class="stat-label">Total Due (PKR)</div><div class="stat-value" id="sDue">—</div></div></div>
+    </div>
+
+    <div class="grid grid-2" style="margin-bottom:24px">
+      <div class="card">
+        <div class="card-header"><i class="fas fa-chart-line" style="color:var(--primary)"></i><h3 class="card-title">Monthly Revenue (PKR)</h3></div>
+        <div class="card-body"><canvas id="revChart" height="200"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><i class="fas fa-chart-bar" style="color:var(--secondary)"></i><h3 class="card-title">Revenue by Type</h3></div>
+        <div class="card-body"><canvas id="typeChart" height="200"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-file-invoice-dollar" style="color:var(--primary)"></i><h3 class="card-title">Recent Invoices</h3></div>
+        <button class="btn btn-outline btn-sm" onclick="showSection('invoices', document.querySelector('[onclick*=invoices]'))"><i class="fas fa-arrow-right"></i> View All</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Invoice No</th><th>Patient</th><th>Type</th><th>Total (PKR)</th><th>Paid (PKR)</th><th>Due (PKR)</th><th>Method</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="invoiceTableDash"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ INVOICES SECTION ============ -->
+  <div class="page-content acct-section" id="section-invoices">
+    <div class="page-header">
+      <div><h1 class="page-title"><span class="text-gradient">Invoices</span></h1><div class="page-subtitle">All patient invoices & billing records</div></div>
+      <button class="btn btn-primary" onclick="Modal.open('createInvoiceModal')"><i class="fas fa-plus"></i> New Invoice</button>
+    </div>
+
+    <div class="grid grid-4" style="margin-bottom:24px">
+      <div class="stat-card stat-card-animated primary"><div class="stat-icon"><i class="fas fa-file-invoice"></i></div><div class="stat-info"><div class="stat-label">Total Invoices</div><div class="stat-value" id="invStatTotal">—</div></div></div>
+      <div class="stat-card stat-card-animated success"><div class="stat-icon"><i class="fas fa-check-circle"></i></div><div class="stat-info"><div class="stat-label">Paid</div><div class="stat-value" id="invStatPaid">—</div></div></div>
+      <div class="stat-card stat-card-animated warning"><div class="stat-icon"><i class="fas fa-hourglass-half"></i></div><div class="stat-info"><div class="stat-label">Pending</div><div class="stat-value" id="invStatPending">—</div></div></div>
+      <div class="stat-card stat-card-animated danger"><div class="stat-icon"><i class="fas fa-exclamation-circle"></i></div><div class="stat-info"><div class="stat-label">Overdue</div><div class="stat-value" id="invStatOverdue">—</div></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-list" style="color:var(--primary)"></i><h3 class="card-title">All Invoices</h3></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="text" class="form-control" id="invSearch" placeholder="Search invoice no, patient..." style="width:200px;padding:6px 12px" oninput="renderInvoicesPage()">
+          <select class="form-control" id="invStatusFilter" style="width:130px" onchange="renderInvoicesPage()">
+            <option value="">All Status</option>
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+            <option value="partial">Partial</option>
+            <option value="overdue">Overdue</option>
+          </select>
+          <select class="form-control" id="invTypeFilter" style="width:130px" onchange="renderInvoicesPage()">
+            <option value="">All Types</option>
+            <option value="consultation">Consultation</option>
+            <option value="pharmacy">Pharmacy</option>
+            <option value="lab">Lab</option>
+            <option value="admission">Admission</option>
+            <option value="other">Other</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="confirmClearInvoices()" style="color:var(--danger);border-color:var(--danger)" title="Delete all invoices"><i class="fas fa-trash-alt"></i> Clear All</button>
+        </div>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Invoice No</th><th>Patient</th><th>Type</th><th>Total (PKR)</th><th>Paid (PKR)</th><th>Due (PKR)</th><th>Method</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="invoiceTablePage"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PAYMENTS SECTION ============ -->
+  <div class="page-content acct-section" id="section-payments">
+    <div class="page-header">
+      <div><h1 class="page-title"><span class="text-gradient">Payments Ledger</span></h1><div class="page-subtitle">All received payments & transactions</div></div>
+    </div>
+
+    <div class="grid grid-4" style="margin-bottom:24px">
+      <div class="stat-card stat-card-animated success"><div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div><div class="stat-info"><div class="stat-label">Total Collected</div><div class="stat-value" id="payStatTotal">—</div></div></div>
+      <div class="stat-card stat-card-animated primary"><div class="stat-icon"><i class="fas fa-cash-register"></i></div><div class="stat-info"><div class="stat-label">Cash</div><div class="stat-value" id="payStatCash">—</div></div></div>
+      <div class="stat-card stat-card-animated warning"><div class="stat-icon"><i class="fas fa-mobile-alt"></i></div><div class="stat-info"><div class="stat-label">Easypaisa / JazzCash</div><div class="stat-value" id="payStatMobile">—</div></div></div>
+      <div class="stat-card stat-card-animated danger"><div class="stat-icon"><i class="fas fa-credit-card"></i></div><div class="stat-info"><div class="stat-label">Card / Credit</div><div class="stat-value" id="payStatCard">—</div></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-receipt" style="color:var(--primary)"></i><h3 class="card-title">Payment History</h3></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="date" class="form-control" id="payDateFrom" style="width:160px;padding:6px 12px" onchange="renderPaymentsPage()">
+          <input type="date" class="form-control" id="payDateTo" style="width:160px;padding:6px 12px" onchange="renderPaymentsPage()">
+          <select class="form-control" id="payMethodFilter" style="width:140px" onchange="renderPaymentsPage()">
+            <option value="">All Methods</option>
+            <option value="cash">Cash</option>
+            <option value="card">Card</option>
+            <option value="easypaisa">Easypaisa</option>
+            <option value="jazzcash">JazzCash</option>
+            <option value="credit">Credit</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Date</th><th>Invoice No</th><th>Patient</th><th>Method</th><th>Amount (PKR)</th><th>Invoice Total</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="paymentsTablePage"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ EXPENSES SECTION ============ -->
+  <div class="page-content acct-section" id="section-expenses">
+    <div class="page-header">
+      <div><h1 class="page-title"><span class="text-gradient">Expenses</span></h1><div class="page-subtitle">Track operational expenses & outflows</div></div>
+      <button class="btn btn-primary" onclick="openExpenseModal()"><i class="fas fa-plus"></i> Add Expense</button>
+    </div>
+
+    <div class="grid grid-4" style="margin-bottom:24px">
+      <div class="stat-card stat-card-animated danger"><div class="stat-icon"><i class="fas fa-receipt"></i></div><div class="stat-info"><div class="stat-label">Total Expenses</div><div class="stat-value" id="expStatTotal">—</div></div></div>
+      <div class="stat-card stat-card-animated primary"><div class="stat-icon"><i class="fas fa-calendar-day"></i></div><div class="stat-info"><div class="stat-label">This Month</div><div class="stat-value" id="expStatMonth">—</div></div></div>
+      <div class="stat-card stat-card-animated warning"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-info"><div class="stat-label">Salary Outflow</div><div class="stat-value" id="expStatSalary">—</div></div></div>
+      <div class="stat-card stat-card-animated success"><div class="stat-icon"><i class="fas fa-bolt"></i></div><div class="stat-info"><div class="stat-label">Utilities</div><div class="stat-value" id="expStatUtil">—</div></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-list" style="color:var(--danger)"></i><h3 class="card-title">Expense Records</h3></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select class="form-control" id="expCategoryFilter" style="width:160px" onchange="renderExpenses()">
+            <option value="">All Categories</option>
+            <option value="salary">Salary</option>
+            <option value="utilities">Utilities</option>
+            <option value="supplies">Supplies</option>
+            <option value="equipment">Equipment</option>
+            <option value="maintenance">Maintenance</option>
+            <option value="other">Other</option>
+          </select>
+          <input type="month" class="form-control" id="expMonthFilter" style="width:160px" onchange="renderExpenses()">
+        </div>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Vendor</th><th>Amount (PKR)</th><th>Added By</th><th>Actions</th></tr></thead>
+          <tbody id="expensesTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ REPORTS SECTION ============ -->
+  <div class="page-content acct-section" id="section-reports">
+    <div class="page-header">
+      <div><h1 class="page-title"><span class="text-gradient">Revenue Reports</span></h1><div class="page-subtitle">Financial insights & analytics</div></div>
+      <div style="display:flex;gap:8px">
+        <input type="month" class="form-control" id="reportMonth" style="width:160px" onchange="renderReports()">
+        <button class="btn btn-outline" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+      </div>
+    </div>
+
+    <div class="grid grid-3" style="margin-bottom:24px">
+      <div class="stat-card stat-card-animated success"><div class="stat-icon"><i class="fas fa-arrow-up"></i></div><div class="stat-info"><div class="stat-label">Total Revenue</div><div class="stat-value" id="repRevenue">—</div></div></div>
+      <div class="stat-card stat-card-animated danger"><div class="stat-icon"><i class="fas fa-arrow-down"></i></div><div class="stat-info"><div class="stat-label">Total Expenses</div><div class="stat-value" id="repExpenses">—</div></div></div>
+      <div class="stat-card stat-card-animated primary"><div class="stat-icon"><i class="fas fa-chart-pie"></i></div><div class="stat-info"><div class="stat-label">Net Profit</div><div class="stat-value" id="repProfit">—</div></div></div>
+    </div>
+
+    <div class="grid grid-2" style="margin-bottom:24px">
+      <div class="card">
+        <div class="card-header"><i class="fas fa-chart-area" style="color:var(--primary)"></i><h3 class="card-title">Revenue Trend (12 Months)</h3></div>
+        <div class="card-body"><canvas id="repTrendChart" height="200"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><i class="fas fa-chart-pie" style="color:var(--secondary)"></i><h3 class="card-title">Revenue by Type</h3></div>
+        <div class="card-body"><canvas id="repTypeChart" height="200"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-header"><i class="fas fa-chart-line" style="color:var(--accent)"></i><h3 class="card-title">Top Patients by Revenue</h3></div>
+        <div class="table-container"><table><thead><tr><th>Patient</th><th>Invoices</th><th>Total (PKR)</th></tr></thead><tbody id="topPatientsTable"></tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><i class="fas fa-trophy" style="color:var(--warning)"></i><h3 class="card-title">Top Services</h3></div>
+        <div class="table-container"><table><thead><tr><th>Description</th><th>Qty</th><th>Revenue (PKR)</th></tr></thead><tbody id="topServicesTable"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ EXPORT SECTION ============ -->
+  <div class="page-content acct-section" id="section-export">
+    <div class="page-header">
+      <div><h1 class="page-title"><span class="text-gradient">Export Data</span></h1><div class="page-subtitle">Download financial records as CSV / Excel / PDF</div></div>
+    </div>
+
+    <div class="grid grid-3" style="margin-bottom:24px">
+      <div class="card export-card" onclick="exportData('invoices')">
+        <div class="card-body" style="text-align:center;padding:32px 16px">
+          <div style="width:64px;height:64px;border-radius:16px;background:var(--primary-light);color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:1.5rem"><i class="fas fa-file-invoice-dollar"></i></div>
+          <h3 style="margin:0 0 4px">Invoices</h3>
+          <p style="margin:0;color:var(--text-muted);font-size:.875rem">All invoices with details</p>
+          <div style="margin-top:14px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+            <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();exportData('invoices','csv')"><i class="fas fa-file-csv"></i> CSV</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card export-card" onclick="exportData('payments')">
+        <div class="card-body" style="text-align:center;padding:32px 16px">
+          <div style="width:64px;height:64px;border-radius:16px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:1.5rem"><i class="fas fa-money-bill-wave"></i></div>
+          <h3 style="margin:0 0 4px">Payments</h3>
+          <p style="margin:0;color:var(--text-muted);font-size:.875rem">Payment history ledger</p>
+          <div style="margin-top:14px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+            <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();exportData('payments','csv')"><i class="fas fa-file-csv"></i> CSV</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card export-card" onclick="exportData('expenses')">
+        <div class="card-body" style="text-align:center;padding:32px 16px">
+          <div style="width:64px;height:64px;border-radius:16px;background:var(--danger);color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:1.5rem"><i class="fas fa-receipt"></i></div>
+          <h3 style="margin:0 0 4px">Expenses</h3>
+          <p style="margin:0;color:var(--text-muted);font-size:.875rem">All expense records</p>
+          <div style="margin-top:14px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+            <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();exportData('expenses','csv')"><i class="fas fa-file-csv"></i> CSV</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="fas fa-calendar-alt" style="color:var(--primary)"></i><h3 class="card-title">Date Range Export</h3></div>
+      <div class="card-body">
+        <div class="form-row" style="max-width:600px">
+          <div class="form-group"><label class="form-label">From</label><input type="date" class="form-control" id="exportFrom"></div>
+          <div class="form-group"><label class="form-label">To</label><input type="date" class="form-control" id="exportTo"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="exportData('invoices-range','csv')"><i class="fas fa-file-invoice"></i> Export Invoices in Range</button>
+          <button class="btn btn-success" onclick="exportData('payments-range','csv')"><i class="fas fa-money-bill"></i> Export Payments in Range</button>
+          <button class="btn btn-danger" onclick="exportData('expenses-range','csv')"><i class="fas fa-receipt"></i> Export Expenses in Range</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+
+<!-- CREATE INVOICE MODAL -->
+<div class="modal-overlay" id="createInvoiceModal">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-file-invoice-dollar"></i> Create Invoice</h3>
+      <button class="modal-close" onclick="Modal.close('createInvoiceModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Patient *</label><input class="form-control" id="invPatient" placeholder="Search patient MRN or name"></div>
+        <div class="form-group"><label class="form-label">Invoice Type</label>
+          <select class="form-control" id="invType"><option value="consultation">Consultation</option><option value="pharmacy">Pharmacy</option><option value="lab">Laboratory</option><option value="admission">Admission</option><option value="other">Other</option></select>
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <label class="form-label" style="margin:0">Invoice Items</label>
+          <button class="btn btn-outline btn-sm" onclick="addInvItem()"><i class="fas fa-plus"></i> Add Item</button>
+        </div>
+        <div id="invItems">
+          <div class="inv-item inv-item-grid" style="display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px">
+            <div><label class="form-label">Description</label><input class="form-control item-desc" placeholder="Consultation fee"></div>
+            <div><label class="form-label">Qty</label><input type="number" class="form-control item-qty" value="1" min="1" oninput="calcTotal()"></div>
+            <div><label class="form-label">Price (PKR)</label><input type="number" class="form-control item-price" placeholder="1500" oninput="calcTotal()"></div>
+            <div style="padding-bottom:2px"><button onclick="removeItem(this)" style="background:var(--danger);color:#fff;border:none;border-radius:8px;width:36px;height:38px;cursor:pointer"><i class="fas fa-times"></i></button></div>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--light-2);border-radius:10px;padding:16px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:.875rem"><span>Subtotal:</span><span id="subtotalDisp">PKR 0</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:.875rem">
+          <span>Discount (PKR):</span><input type="number" id="invDiscount" class="form-control" style="width:120px;padding:6px" value="0" oninput="calcTotal()">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:.875rem">
+          <span>GST (%):</span><input type="number" id="invTax" class="form-control" style="width:80px;padding:6px" value="0" oninput="calcTotal()">
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:1.1rem;font-weight:800;border-top:2px solid var(--light-3);padding-top:8px"><span>TOTAL:</span><span id="totalDisp" style="color:var(--primary)">PKR 0</span></div>
+      </div>
+      <div class="form-row" style="margin-top:14px">
+        <div class="form-group"><label class="form-label">Paid Amount (PKR)</label><input type="number" class="form-control" id="invPaid" placeholder="0" value="0" oninput="calcTotal()"></div>
+        <div class="form-group"><label class="form-label">Payment Method</label>
+          <select class="form-control" id="invMethod"><option value="cash">Cash</option><option value="card">Card</option><option value="easypaisa">Easypaisa</option><option value="jazzcash">JazzCash</option><option value="credit">Credit</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-control" id="invNotes" rows="2" placeholder="Any notes..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('createInvoiceModal')">Cancel</button>
+      <button class="btn btn-success" onclick="createInvoice(true)"><i class="fas fa-print"></i> Save & Print</button>
+      <button class="btn btn-primary" onclick="createInvoice(false)"><i class="fas fa-save"></i> Save Invoice</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECORD PAYMENT MODAL -->
+<div class="modal-overlay" id="recordPaymentModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-money-bill-wave"></i> Record Payment</h3>
+      <button class="modal-close" onclick="Modal.close('recordPaymentModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--light-2);border-radius:10px;padding:14px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:.85rem"><span>Invoice #:</span><strong id="rpInvNo">—</strong></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:.85rem"><span>Patient:</span><strong id="rpPatient">—</strong></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:.85rem"><span>Total:</span><strong id="rpTotal">—</strong></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:.85rem"><span>Already Paid:</span><strong id="rpPaid" style="color:var(--accent)">—</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:1rem;font-weight:700;border-top:1px solid var(--light-3);padding-top:6px;margin-top:6px"><span>Due:</span><strong id="rpDue" style="color:var(--danger)">—</strong></div>
+      </div>
+      <input type="hidden" id="rpInvoiceId">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Amount (PKR) *</label><input type="number" class="form-control" id="rpAmount" placeholder="0" min="0" step="0.01"></div>
+        <div class="form-group"><label class="form-label">Method</label>
+          <select class="form-control" id="rpMethod"><option value="cash">Cash</option><option value="card">Card</option><option value="easypaisa">Easypaisa</option><option value="jazzcash">JazzCash</option><option value="credit">Credit</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('recordPaymentModal')">Cancel</button>
+      <button class="btn btn-success" onclick="submitPayment()"><i class="fas fa-check"></i> Record Payment</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD EXPENSE MODAL -->
+<div class="modal-overlay" id="addExpenseModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-receipt"></i> <span id="expModalTitle">Add Expense</span></h3>
+      <button class="modal-close" onclick="Modal.close('addExpenseModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="expEditId">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Date *</label><input type="date" class="form-control" id="expDate"></div>
+        <div class="form-group"><label class="form-label">Category *</label>
+          <select class="form-control" id="expCategory"><option value="salary">Salary</option><option value="utilities">Utilities</option><option value="supplies">Supplies</option><option value="equipment">Equipment</option><option value="maintenance">Maintenance</option><option value="other">Other</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Description *</label><input class="form-control" id="expDescription" placeholder="e.g. October salaries, Electricity bill"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Vendor / Payee</label><input class="form-control" id="expVendor" placeholder="e.g. K-Electric, Staff"></div>
+        <div class="form-group"><label class="form-label">Amount (PKR) *</label><input type="number" class="form-control" id="expAmount" placeholder="0" min="0" step="0.01"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-control" id="expNotes" rows="2" placeholder="Optional..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('addExpenseModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveExpense()"><i class="fas fa-save"></i> Save Expense</button>
+    </div>
+  </div>
+</div>
+
+<!-- INVOICE DETAIL MODAL -->
+<div class="modal-overlay" id="invoiceDetailModal">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-file-invoice"></i> Invoice <span id="idInvNo">—</span></h3>
+      <button class="modal-close" onclick="Modal.close('invoiceDetailModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="idBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('invoiceDetailModal')">Close</button>
+      <button class="btn btn-primary" onclick="printInvoiceContent()"><i class="fas fa-print"></i> Print</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../js/dashboard.js"></script>
+<script>
+let allInvoices = [];
+let allExpenses = [];
+let currentSection = 'dashboard';
+let revChartInst = null;
+let typeChartInst = null;
+let repTrendInst = null;
+let repTypeInst = null;
+let reportRangeInvoices = [];
+
+function showSection(name, navEl) {
+  document.querySelectorAll('.acct-section').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById('section-' + name);
+  if (target) target.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+  else {
+    const link = document.querySelector('.nav-item[onclick*="' + name + '"]');
+    if (link) link.classList.add('active');
+  }
+  currentSection = name;
+  if (name === 'invoices') renderInvoicesPage();
+  else if (name === 'payments') renderPaymentsPage();
+  else if (name === 'expenses') renderExpenses();
+  else if (name === 'reports') renderReports();
+}
+
+function globalSearch(q) {
+  q = (q || '').trim().toLowerCase();
+  if (currentSection === 'dashboard') renderInvoiceDashRows(allInvoices.filter(i => !q || (i.invoice_no||'').toLowerCase().includes(q) || (i.patient_name||'').toLowerCase().includes(q)));
+  else if (currentSection === 'invoices') renderInvoicesPage();
+  else if (currentSection === 'payments') renderPaymentsPage();
+  else if (currentSection === 'expenses') renderExpenses();
+}
+
+async function loadDashboard() {
+  try {
+    const data = await API.get('/billing/stats');
+    const s = data?.success ? data : {today_revenue:0,total_invoices:0,pending:0,total_pending_amount:0};
+    document.getElementById('sTodayRev').textContent = 'PKR ' + Format.number(Math.floor(s.today_revenue || 0));
+    document.getElementById('sTotalInv').textContent = s.total_invoices || 0;
+    document.getElementById('sPending').textContent = s.pending || 0;
+    document.getElementById('sDue').textContent = Format.number(Math.floor(s.total_pending_amount || 0));
+  } catch(e) { console.error('stats', e); }
+
+  try {
+    const invData = await API.get('/billing/invoices?per_page=200');
+    allInvoices = invData?.invoices || [];
+    renderInvoiceDashRows(allInvoices.slice(0, 10));
+  } catch(e) { console.error('invoices', e); }
+
+  renderCharts();
+  loadExpenses();
+}
+
+function renderInvoiceDashRows(invoices) {
+  const tbody = document.getElementById('invoiceTableDash');
+  if (!tbody) return;
+  if(!invoices.length){tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text-muted)">No invoices</td></tr>';return;}
+  tbody.innerHTML = invoices.map(inv => `
+    <tr>
+      <td><code style="font-size:.78rem">${inv.invoice_no}</code></td>
+      <td style="font-weight:600">${inv.patient_name||'—'}</td>
+      <td><span class="badge badge-secondary">${inv.type}</span></td>
+      <td style="font-weight:700">PKR ${Format.number(inv.total_amount)}</td>
+      <td style="color:var(--accent);font-weight:600">PKR ${Format.number(inv.paid_amount)}</td>
+      <td style="color:${inv.due_amount>0?'var(--danger)':'var(--accent)'};font-weight:600">PKR ${Format.number(inv.due_amount)}</td>
+      <td style="font-size:.8rem">${inv.payment_method}</td>
+      <td>${Format.badge(inv.payment_status)}</td>
+      <td style="font-size:.8rem">${Format.date(inv.created_at)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline btn-sm" onclick="viewInvoice(${inv.id})" title="View"><i class="fas fa-eye"></i></button>
+        ${inv.due_amount>0?`<button class="btn btn-success btn-sm" onclick="openPayModal(${inv.id})" title="Pay"><i class="fas fa-money-bill"></i></button>`:''}
+        <button class="btn btn-outline btn-sm" onclick="printInvoice(${inv.id})" title="Print"><i class="fas fa-print"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+function renderInvoicesPage() {
+  const tbody = document.getElementById('invoiceTablePage');
+  if (!tbody) return;
+  const q = (document.getElementById('invSearch')?.value || '').toLowerCase().trim();
+  const status = document.getElementById('invStatusFilter')?.value || '';
+  const type = document.getElementById('invTypeFilter')?.value || '';
+  let list = allInvoices.slice();
+  if (q) list = list.filter(i => (i.invoice_no||'').toLowerCase().includes(q) || (i.patient_name||'').toLowerCase().includes(q));
+  if (status) list = list.filter(i => i.payment_status === status);
+  if (type) list = list.filter(i => i.type === type);
+
+  const total = allInvoices.length;
+  const paid = allInvoices.filter(i => i.payment_status === 'paid').length;
+  const pending = allInvoices.filter(i => i.payment_status === 'pending').length;
+  const overdue = allInvoices.filter(i => i.payment_status === 'overdue').length;
+  const set = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+  set('invStatTotal', total);
+  set('invStatPaid', paid);
+  set('invStatPending', pending);
+  set('invStatOverdue', overdue);
+
+  if(!list.length){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text-muted)">No invoices match your filters</td></tr>';return;}
+  tbody.innerHTML = list.map(inv => `
+    <tr>
+      <td><code style="font-size:.78rem">${inv.invoice_no}</code></td>
+      <td style="font-weight:600">${inv.patient_name||'—'}</td>
+      <td><span class="badge badge-secondary">${inv.type}</span></td>
+      <td style="font-weight:700">PKR ${Format.number(inv.total_amount)}</td>
+      <td style="color:var(--accent);font-weight:600">PKR ${Format.number(inv.paid_amount)}</td>
+      <td style="color:${inv.due_amount>0?'var(--danger)':'var(--accent)'};font-weight:600">PKR ${Format.number(inv.due_amount)}</td>
+      <td style="font-size:.8rem">${inv.payment_method}</td>
+      <td>${Format.badge(inv.payment_status)}</td>
+      <td style="font-size:.8rem">${Format.date(inv.created_at)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline btn-sm" onclick="viewInvoice(${inv.id})" title="View"><i class="fas fa-eye"></i></button>
+        ${inv.due_amount>0?`<button class="btn btn-success btn-sm" onclick="openPayModal(${inv.id})" title="Pay"><i class="fas fa-money-bill"></i></button>`:''}
+        <button class="btn btn-outline btn-sm" onclick="printInvoice(${inv.id})" title="Print"><i class="fas fa-print"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+function renderPaymentsPage() {
+  const tbody = document.getElementById('paymentsTablePage');
+  if (!tbody) return;
+  const from = document.getElementById('payDateFrom')?.value;
+  const to = document.getElementById('payDateTo')?.value;
+  const method = document.getElementById('payMethodFilter')?.value || '';
+  let list = allInvoices.filter(i => Number(i.paid_amount) > 0);
+  if (from) list = list.filter(i => (i.created_at||'').slice(0,10) >= from);
+  if (to) list = list.filter(i => (i.created_at||'').slice(0,10) <= to);
+  if (method) list = list.filter(i => i.payment_method === method);
+
+  const totalCollected = list.reduce((s,i) => s + Number(i.paid_amount||0), 0);
+  const cash = list.filter(i => i.payment_method==='cash').reduce((s,i)=>s+Number(i.paid_amount||0),0);
+  const mobile = list.filter(i => ['easypaisa','jazzcash'].includes(i.payment_method)).reduce((s,i)=>s+Number(i.paid_amount||0),0);
+  const card = list.filter(i => ['card','credit'].includes(i.payment_method)).reduce((s,i)=>s+Number(i.paid_amount||0),0);
+  const set = (id,v) => { const e=document.getElementById(id); if(e) e.textContent='PKR '+Format.number(Math.floor(v)); };
+  set('payStatTotal', totalCollected);
+  set('payStatCash', cash);
+  set('payStatMobile', mobile);
+  set('payStatCard', card);
+
+  if(!list.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-muted)">No payments recorded yet</td></tr>';return;}
+  tbody.innerHTML = list.map(inv => `
+    <tr class="payment-row">
+      <td style="font-size:.85rem">${Format.date(inv.created_at)}</td>
+      <td><code style="font-size:.78rem">${inv.invoice_no}</code></td>
+      <td style="font-weight:600">${inv.patient_name||'—'}</td>
+      <td><span class="badge badge-info">${inv.payment_method}</span></td>
+      <td style="color:var(--accent);font-weight:700">PKR ${Format.number(inv.paid_amount)}</td>
+      <td>PKR ${Format.number(inv.total_amount)}</td>
+      <td>${Format.badge(inv.payment_status)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline btn-sm" onclick="viewInvoice(${inv.id})" title="View"><i class="fas fa-eye"></i></button>
+        <button class="btn btn-outline btn-sm" onclick="printInvoice(${inv.id})" title="Print"><i class="fas fa-print"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+function renderCharts() {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if (revChartInst) revChartInst.destroy();
+  if (typeChartInst) typeChartInst.destroy();
+  const revEl = document.getElementById('revChart');
+  const typeEl = document.getElementById('typeChart');
+  if (revEl) {
+    revChartInst = new Chart(revEl, {type:'line',data:{labels:months,datasets:[{label:'Revenue (PKR)',data:[125000,148000,132000,185000,162000,194000,210000,198000,225000,215000,240000,285000],borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.08)',fill:true,tension:.4,pointRadius:4,pointBackgroundColor:'#10b981'}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'PKR '+(v/1000).toFixed(0)+'K'}}}}});
+  }
+  if (typeEl) {
+    typeChartInst = new Chart(typeEl, {type:'bar',data:{labels:['Consultation','Pharmacy','Lab','Admission','Other'],datasets:[{label:'Revenue',data:[85000,52000,38000,95000,15000],backgroundColor:['#0ea5e9','#10b981','#6366f1','#f59e0b','#64748b'],borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'PKR '+(v/1000).toFixed(0)+'K'}}}}});
+  }
+}
+
+function addInvItem() {
+  const row = document.createElement('div');
+  row.className = 'inv-item';
+  row.style.cssText = 'display:grid;grid-template-columns:3fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px';
+  row.innerHTML = `<div><input class="form-control item-desc" placeholder="Description"></div><div><input type="number" class="form-control item-qty" value="1" min="1" oninput="calcTotal()"></div><div><input type="number" class="form-control item-price" placeholder="0" oninput="calcTotal()"></div><div><button onclick="removeItem(this)" style="background:var(--danger);color:#fff;border:none;border-radius:8px;width:36px;height:38px;cursor:pointer"><i class="fas fa-times"></i></button></div>`;
+  document.getElementById('invItems').appendChild(row);
+}
+
+function removeItem(btn) { btn.closest('.inv-item').remove(); calcTotal(); }
+
+function calcTotal() {
+  const items = [...document.querySelectorAll('.inv-item')];
+  const sub = items.reduce((s,row) => {
+    const qty = Number(row.querySelector('.item-qty')?.value)||1;
+    const price = Number(row.querySelector('.item-price')?.value)||0;
+    return s + qty*price;
+  }, 0);
+  const disc = Number(document.getElementById('invDiscount').value)||0;
+  const tax = Number(document.getElementById('invTax').value)||0;
+  const taxAmt = (sub-disc)*tax/100;
+  const total = sub-disc+taxAmt;
+  document.getElementById('subtotalDisp').textContent = 'PKR ' + Format.number(sub.toFixed(2));
+  document.getElementById('totalDisp').textContent = 'PKR ' + Format.number(total.toFixed(2));
+}
+
+async function createInvoice(doPrint=false) {
+  const items = [...document.querySelectorAll('.inv-item')].map(row => ({
+    description:row.querySelector('.item-desc')?.value||'Service',
+    quantity:Number(row.querySelector('.item-qty')?.value)||1,
+    unit_price:Number(row.querySelector('.item-price')?.value)||0
+  })).filter(i=>i.unit_price>0);
+  if(!items.length){Toast.error('Add at least one item with a price');return;}
+
+  const mrn = document.getElementById('invPatient').value.trim();
+  if(!mrn){Toast.error('Patient MRN required');return;}
+
+  const pRes = await API.get(`/patients/?search=${encodeURIComponent(mrn)}`);
+  if(!pRes?.success || !pRes.patients.length){
+    Toast.error('Patient not found');
+    return;
+  }
+  const patient_id = pRes.patients[0].id;
+
+  const payload={patient_id:patient_id,type:document.getElementById('invType').value,items,discount:document.getElementById('invDiscount').value||0,tax_rate:document.getElementById('invTax').value||0,paid_amount:document.getElementById('invPaid').value||0,payment_method:document.getElementById('invMethod').value,notes:document.getElementById('invNotes').value};
+  const data=await API.post('/billing/invoices',payload);
+  if(data?.success){
+    Toast.success('Invoice #'+data.invoice?.invoice_no+' created!');
+    Modal.close('createInvoiceModal');
+    resetInvoiceForm();
+    loadDashboard();
+    if (doPrint && data.invoice) setTimeout(() => printInvoice(data.invoice.id), 500);
+  } else {
+    Toast.error(data?.message || 'Failed to create invoice');
+  }
+}
+
+function resetInvoiceForm() {
+  const items = document.getElementById('invItems');
+  if (items) {
+    const all = items.querySelectorAll('.inv-item');
+    for (let i = all.length - 1; i > 0; i--) all[i].remove();
+    const first = items.querySelector('.inv-item');
+    if (first) {
+      first.querySelector('.item-desc').value = '';
+      first.querySelector('.item-qty').value = 1;
+      first.querySelector('.item-price').value = '';
+    }
+  }
+  ['invPatient','invDiscount','invTax','invPaid','invNotes'].forEach(id => {
+    const e = document.getElementById(id);
+    if (e) e.value = id === 'invDiscount' || id === 'invTax' || id === 'invPaid' ? '0' : '';
+  });
+  calcTotal();
+}
+
+function openPayModal(id) {
+  const inv = allInvoices.find(i => i.id === id);
+  if (!inv) { Toast.error('Invoice not found'); return; }
+  document.getElementById('rpInvoiceId').value = id;
+  document.getElementById('rpInvNo').textContent = inv.invoice_no;
+  document.getElementById('rpPatient').textContent = inv.patient_name || '—';
+  document.getElementById('rpTotal').textContent = 'PKR ' + Format.number(inv.total_amount);
+  document.getElementById('rpPaid').textContent = 'PKR ' + Format.number(inv.paid_amount);
+  document.getElementById('rpDue').textContent = 'PKR ' + Format.number(inv.due_amount);
+  const amtInput = document.getElementById('rpAmount');
+  amtInput.value = inv.due_amount;
+  amtInput.max = inv.due_amount;
+  document.getElementById('rpMethod').value = inv.payment_method || 'cash';
+  Modal.open('recordPaymentModal');
+}
+
+function confirmClearInvoices() {
+  if (!allInvoices.length) { Toast.info('No invoices to clear'); return; }
+  if (!confirm(`Delete ALL ${allInvoices.length} invoices?\n\nThis cannot be undone!`)) return;
+  clearAllInvoices();
+}
+
+async function clearAllInvoices() {
+  const res = await API.delete('/billing/clear-all');
+  if (res?.success) {
+    Toast.success(res.message || 'All invoices cleared');
+    loadDashboard();
+  } else {
+    Toast.error(res?.message || 'Failed to clear invoices');
+  }
+}
+
+async function submitPayment() {
+  const id = document.getElementById('rpInvoiceId').value;
+  const amt = Number(document.getElementById('rpAmount').value);
+  const method = document.getElementById('rpMethod').value;
+  if (!id || !amt || amt <= 0) { Toast.error('Enter a valid amount'); return; }
+  const res = await API.post(`/billing/invoices/${id}/pay`, { amount: amt, payment_method: method });
+  if (res?.success) {
+    Toast.success(`PKR ${Format.number(amt)} recorded!`);
+    Modal.close('recordPaymentModal');
+    loadDashboard();
+  } else {
+    Toast.error(res?.message || 'Payment failed');
+  }
+}
+
+function viewInvoice(id) {
+  const inv = allInvoices.find(i => i.id === id);
+  if (!inv) { Toast.error('Invoice not found'); return; }
+  document.getElementById('idInvNo').textContent = '#' + inv.invoice_no;
+  const items = (inv.items || []).map(it => `
+    <tr>
+      <td>${it.description}</td>
+      <td style="text-align:center">${it.quantity}</td>
+      <td style="text-align:right">PKR ${Format.number(it.unit_price)}</td>
+      <td style="text-align:right;font-weight:600">PKR ${Format.number(it.total_price)}</td>
+    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">No items</td></tr>';
+  document.getElementById('idBody').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div><div style="font-size:.78rem;color:var(--text-muted)">Patient</div><div style="font-weight:600">${inv.patient_name||'—'}</div></div>
+      <div><div style="font-size:.78rem;color:var(--text-muted)">Date</div><div style="font-weight:600">${Format.date(inv.created_at)}</div></div>
+      <div><div style="font-size:.78rem;color:var(--text-muted)">Type</div><div style="font-weight:600">${inv.type}</div></div>
+      <div><div style="font-size:.78rem;color:var(--text-muted)">Method</div><div style="font-weight:600">${inv.payment_method}</div></div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+      <thead><tr style="background:var(--light-2)"><th style="text-align:left;padding:8px">Description</th><th style="text-align:center;padding:8px">Qty</th><th style="text-align:right;padding:8px">Unit</th><th style="text-align:right;padding:8px">Total</th></tr></thead>
+      <tbody>${items}</tbody>
+    </table>
+    <div style="background:var(--light-2);border-radius:10px;padding:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>Subtotal:</span><span>PKR ${Format.number(inv.subtotal||0)}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>Discount:</span><span>PKR ${Format.number(inv.discount||0)}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>Tax:</span><span>PKR ${Format.number(inv.tax||0)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:1.1rem;font-weight:800;border-top:2px solid var(--light-3);padding-top:8px;margin-top:6px"><span>TOTAL:</span><span style="color:var(--primary)">PKR ${Format.number(inv.total_amount)}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;color:var(--accent)"><span>Paid:</span><span>PKR ${Format.number(inv.paid_amount)}</span></div>
+      <div style="display:flex;justify-content:space-between;color:${inv.due_amount>0?'var(--danger)':'var(--accent)'}"><span>Due:</span><span>PKR ${Format.number(inv.due_amount)}</span></div>
+    </div>
+    ${inv.notes?`<div style="margin-top:12px;padding:10px;background:var(--light-2);border-radius:8px;font-size:.85rem"><strong>Notes:</strong> ${inv.notes}</div>`:''}
+    <div style="margin-top:10px">Status: ${Format.badge(inv.payment_status)}</div>
+  `;
+  Modal.open('invoiceDetailModal');
+}
+
+function printInvoiceContent() {
+  const body = document.getElementById('idBody').innerHTML;
+  const win = window.open('', '_blank');
+  win.document.write(`<html><head><title>Invoice</title><style>body{font-family:Arial;padding:30px}h2{color:#0284c7}table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #eee}th{background:#f3f4f6;text-align:left}</style></head><body><h2>Hospify — Invoice</h2>${body}<script>window.onload=()=>window.print();<\/script></body></html>`);
+  win.document.close();
+}
+
+function printInvoice(id) {
+  viewInvoice(id);
+  setTimeout(printInvoiceContent, 300);
+}
+
+const EXP_KEY = 'hospify_expenses_v1';
+function loadExpenses() {
+  try { allExpenses = JSON.parse(localStorage.getItem(EXP_KEY) || '[]'); }
+  catch(e) { allExpenses = []; }
+  if (currentSection === 'expenses') renderExpenses();
+}
+function saveExpensesStore() { localStorage.setItem(EXP_KEY, JSON.stringify(allExpenses)); }
+
+function renderExpenses() {
+  const tbody = document.getElementById('expensesTable');
+  if (!tbody) return;
+  const cat = document.getElementById('expCategoryFilter')?.value || '';
+  const mo = document.getElementById('expMonthFilter')?.value || '';
+  let list = allExpenses.slice().sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  if (cat) list = list.filter(e => e.category === cat);
+  if (mo) list = list.filter(e => (e.date||'').startsWith(mo));
+
+  const total = allExpenses.reduce((s,e) => s + Number(e.amount||0), 0);
+  const now = new Date(); const ym = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  const thisMonth = allExpenses.filter(e => (e.date||'').startsWith(ym)).reduce((s,e)=>s+Number(e.amount||0),0);
+  const salary = allExpenses.filter(e => e.category==='salary').reduce((s,e)=>s+Number(e.amount||0),0);
+  const util = allExpenses.filter(e => e.category==='utilities').reduce((s,e)=>s+Number(e.amount||0),0);
+  const set = (id,v) => { const e=document.getElementById(id); if(e) e.textContent='PKR '+Format.number(Math.floor(v)); };
+  set('expStatTotal', total);
+  set('expStatMonth', thisMonth);
+  set('expStatSalary', salary);
+  set('expStatUtil', util);
+
+  if(!list.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted)">No expenses recorded. Click "Add Expense" to start.</td></tr>';return;}
+  tbody.innerHTML = list.map(e => `
+    <tr>
+      <td style="font-size:.85rem">${e.date||'—'}</td>
+      <td><span class="exp-cat-badge ${e.category}">${e.category}</span></td>
+      <td style="font-weight:600">${e.description||'—'}</td>
+      <td>${e.vendor||'—'}</td>
+      <td style="color:var(--danger);font-weight:700">PKR ${Format.number(e.amount)}</td>
+      <td style="font-size:.8rem">${e.added_by||'You'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline btn-sm" onclick="editExpense('${e.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-outline btn-sm" onclick="deleteExpense('${e.id}')" title="Delete" style="color:var(--danger)"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+function openExpenseModal(editId) {
+  document.getElementById('expEditId').value = editId || '';
+  document.getElementById('expModalTitle').textContent = editId ? 'Edit Expense' : 'Add Expense';
+  const today = new Date().toISOString().slice(0,10);
+  if (editId) {
+    const e = allExpenses.find(x => x.id === editId);
+    if (e) {
+      document.getElementById('expDate').value = e.date || today;
+      document.getElementById('expCategory').value = e.category || 'other';
+      document.getElementById('expDescription').value = e.description || '';
+      document.getElementById('expVendor').value = e.vendor || '';
+      document.getElementById('expAmount').value = e.amount || '';
+      document.getElementById('expNotes').value = e.notes || '';
+    }
+  } else {
+    document.getElementById('expDate').value = today;
+    document.getElementById('expCategory').value = 'other';
+    document.getElementById('expDescription').value = '';
+    document.getElementById('expVendor').value = '';
+    document.getElementById('expAmount').value = '';
+    document.getElementById('expNotes').value = '';
+  }
+  Modal.open('addExpenseModal');
+}
+
+function saveExpense() {
+  const editId = document.getElementById('expEditId').value;
+  const date = document.getElementById('expDate').value;
+  const category = document.getElementById('expCategory').value;
+  const description = document.getElementById('expDescription').value.trim();
+  const vendor = document.getElementById('expVendor').value.trim();
+  const amount = Number(document.getElementById('expAmount').value);
+  const notes = document.getElementById('expNotes').value.trim();
+  if (!date || !description || !amount) { Toast.error('Date, description & amount required'); return; }
+  if (editId) {
+    const e = allExpenses.find(x => x.id === editId);
+    if (e) { Object.assign(e, {date,category,description,vendor,amount,notes}); }
+  } else {
+    allExpenses.push({ id:'EXP-' + Date.now() + '-' + Math.random().toString(36).slice(2,6), date,category,description,vendor,amount,notes,added_by:Auth.user?.username||'You',created_at:new Date().toISOString() });
+  }
+  saveExpensesStore();
+  Toast.success(editId ? 'Expense updated' : 'Expense added');
+  Modal.close('addExpenseModal');
+  renderExpenses();
+}
+
+function editExpense(id) { openExpenseModal(id); }
+
+function deleteExpense(id) {
+  if (!confirm('Delete this expense?')) return;
+  allExpenses = allExpenses.filter(e => e.id !== id);
+  saveExpensesStore();
+  Toast.success('Expense deleted');
+  renderExpenses();
+}
+
+function renderReports() {
+  const month = document.getElementById('reportMonth')?.value;
+  let list = allInvoices.slice();
+  if (month) list = list.filter(i => (i.created_at||'').startsWith(month));
+
+  const revenue = list.reduce((s,i) => s + Number(i.paid_amount||0), 0);
+  const mo = month || (new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0'));
+  const expList = allExpenses.filter(e => !month || (e.date||'').startsWith(month));
+  const expenses = expList.reduce((s,e) => s + Number(e.amount||0), 0);
+  const profit = revenue - expenses;
+  const set = (id,v,prefix='PKR ') => { const e=document.getElementById(id); if(e) e.textContent=prefix+Format.number(Math.floor(v)); };
+  set('repRevenue', revenue);
+  set('repExpenses', expenses);
+  set('repProfit', profit);
+
+  const typeMap = {};
+  list.forEach(i => { typeMap[i.type] = (typeMap[i.type]||0) + Number(i.paid_amount||0); });
+
+  if (repTypeInst) repTypeInst.destroy();
+  const typeEl = document.getElementById('repTypeChart');
+  if (typeEl) {
+    const labels = Object.keys(typeMap).length ? Object.keys(typeMap) : ['No data'];
+    const data = Object.keys(typeMap).length ? Object.values(typeMap) : [0];
+    repTypeInst = new Chart(typeEl, {type:'doughnut',data:{labels,datasets:[{data,backgroundColor:['#0ea5e9','#10b981','#6366f1','#f59e0b','#64748b']}]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}});
+  }
+
+  if (repTrendInst) repTrendInst.destroy();
+  const trendEl = document.getElementById('repTrendChart');
+  if (trendEl) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const monthly = Array(12).fill(0);
+    allInvoices.forEach(i => { const d = new Date(i.created_at); if (!isNaN(d)) monthly[d.getMonth()] += Number(i.paid_amount||0); });
+    repTrendInst = new Chart(trendEl, {type:'line',data:{labels:months,datasets:[{label:'Revenue',data:monthly,borderColor:'#0ea5e9',backgroundColor:'rgba(14,165,233,.1)',fill:true,tension:.4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'PKR '+(v/1000).toFixed(0)+'K'}}}}});
+  }
+
+  const patMap = {};
+  list.forEach(i => { const k = i.patient_name || 'Unknown'; if (!patMap[k]) patMap[k] = {count:0,total:0}; patMap[k].count++; patMap[k].total += Number(i.total_amount||0); });
+  const topPats = Object.entries(patMap).sort((a,b)=>b[1].total-a[1].total).slice(0,8);
+  const ptTbody = document.getElementById('topPatientsTable');
+  ptTbody.innerHTML = topPats.length ? topPats.map(([n,d]) => `<tr><td style="font-weight:600">${n}</td><td>${d.count}</td><td style="font-weight:700">PKR ${Format.number(d.total)}</td></tr>`).join('') : '<tr><td colspan="3" style="text-align:center;color:var(--text-muted)">No data</td></tr>';
+
+  const svcMap = {};
+  list.forEach(i => (i.items||[]).forEach(it => { const k = it.description; if (!svcMap[k]) svcMap[k] = {qty:0,rev:0}; svcMap[k].qty += Number(it.quantity||0); svcMap[k].rev += Number(it.total_price||0); }));
+  const topSvcs = Object.entries(svcMap).sort((a,b)=>b[1].rev-a[1].rev).slice(0,8);
+  const svTbody = document.getElementById('topServicesTable');
+  svTbody.innerHTML = topSvcs.length ? topSvcs.map(([n,d]) => `<tr><td style="font-weight:600">${n}</td><td>${d.qty}</td><td style="font-weight:700">PKR ${Format.number(d.rev)}</td></tr>`).join('') : '<tr><td colspan="3" style="text-align:center;color:var(--text-muted)">No data</td></tr>';
+
+  reportRangeInvoices = list;
+}
+
+function exportData(kind, format='csv') {
+  let rows = [], filename = '';
+  if (kind === 'invoices') { rows = allInvoices; filename = 'hospify_invoices_'+todayStamp()+'.csv'; }
+  else if (kind === 'payments') { rows = allInvoices.filter(i => Number(i.paid_amount) > 0); filename = 'hospify_payments_'+todayStamp()+'.csv'; }
+  else if (kind === 'expenses') { rows = allExpenses; filename = 'hospify_expenses_'+todayStamp()+'.csv'; }
+  else if (kind === 'invoices-range') {
+    const f = document.getElementById('exportFrom').value; const t = document.getElementById('exportTo').value;
+    rows = allInvoices.filter(i => { const d = (i.created_at||'').slice(0,10); return (!f || d >= f) && (!t || d <= t); });
+    filename = 'hospify_invoices_'+(f||'all')+'_to_'+(t||'all')+'.csv';
+  }
+  else if (kind === 'payments-range') {
+    const f = document.getElementById('exportFrom').value; const t = document.getElementById('exportTo').value;
+    rows = allInvoices.filter(i => { const d = (i.created_at||'').slice(0,10); return Number(i.paid_amount) > 0 && (!f || d >= f) && (!t || d <= t); });
+    filename = 'hospify_payments_'+(f||'all')+'_to_'+(t||'all')+'.csv';
+  }
+  else if (kind === 'expenses-range') {
+    const f = document.getElementById('exportFrom').value; const t = document.getElementById('exportTo').value;
+    rows = allExpenses.filter(e => { const d = e.date||''; return (!f || d >= f) && (!t || d <= t); });
+    filename = 'hospify_expenses_'+(f||'all')+'_to_'+(t||'all')+'.csv';
+  }
+  if (!rows.length) { Toast.error('No records to export'); return; }
+  downloadCSV(rows, filename);
+}
+
+function todayStamp() { return new Date().toISOString().slice(0,10); }
+
+function downloadCSV(rows, filename) {
+  let csv = '';
+  if (rows.length && rows[0].invoice_no) {
+    csv = 'Invoice No,Patient,Type,Subtotal,Discount,Tax,Total,Paid,Due,Method,Status,Date\n';
+    csv += rows.map(r => [
+      r.invoice_no, `"${(r.patient_name||'').replace(/"/g,'""')}"`, r.type, r.subtotal, r.discount, r.tax, r.total_amount, r.paid_amount, r.due_amount, r.payment_method, r.payment_status, r.created_at
+    ].join(',')).join('\n');
+  } else {
+    csv = 'ID,Date,Category,Description,Vendor,Amount,Notes\n';
+    csv += rows.map(r => [
+      r.id, r.date, r.category, `"${(r.description||'').replace(/"/g,'""')}"`, `"${(r.vendor||'').replace(/"/g,'""')}"`, r.amount, `"${(r.notes||'').replace(/"/g,'""')}"`
+    ].join(',')).join('\n');
+  }
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  Toast.success('Exported ' + rows.length + ' records as ' + filename);
+}
+
+Auth.require();
+loadDashboard();
+</script>
+</body>
+</html>

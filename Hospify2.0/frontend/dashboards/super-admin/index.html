@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hospify</title>
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="dashboard-layout">
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon"><i class="fas fa-hospital-symbol"></i></div>
+    <span class="brand-text">Hospify<span style="color:var(--primary-light)">.</span></span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">Main</div>
+    <a class="nav-item active" id="nav-dashboard" onclick="switchPage('dashboard')">
+      <i class="fas fa-gauge-high"></i><span class="nav-label">Dashboard</span>
+    </a>
+    <a class="nav-item" id="nav-hospitals" onclick="switchPage('hospitals')">
+      <i class="fas fa-hospital"></i><span class="nav-label">Hospitals</span>
+    </a>
+    <a class="nav-item" id="nav-users" onclick="switchPage('users')">
+      <i class="fas fa-users"></i><span class="nav-label">All Users</span>
+    </a>
+    <div class="nav-section-title">Analytics</div>
+    <a class="nav-item" id="nav-revenue" onclick="switchPage('revenue')">
+      <i class="fas fa-chart-line"></i><span class="nav-label">Revenue Reports</span>
+    </a>
+    <a class="nav-item" id="nav-analytics" onclick="switchPage('analytics')">
+      <i class="fas fa-chart-bar"></i><span class="nav-label">System Analytics</span>
+    </a>
+    <div class="nav-section-title">System</div>
+    <a class="nav-item" id="nav-audit" onclick="switchPage('audit')">
+      <i class="fas fa-shield-halved"></i><span class="nav-label">Audit Logs</span>
+    </a>
+    <a class="nav-item" id="nav-settings" onclick="switchPage('settings')">
+      <i class="fas fa-gear"></i><span class="nav-label">Settings</span>
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar"><span class="user-initials">SA</span></div>
+      <div class="user-info">
+        <div class="user-name" id="userFullName">Super Admin</div>
+        <div class="user-role" id="userRole">Super Admin</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- HEADER -->
+<header class="header" id="header">
+  <button class="header-toggle" onclick="Sidebar.toggle()"><i class="fas fa-bars"></i></button>
+  <div class="header-search">
+    <i class="fas fa-search"></i>
+    <input type="text" placeholder="Search hospitals, users...">
+  </div>
+  <div class="header-actions">
+    <button class="header-btn" id="themeToggle" onclick="Theme.toggle()"><i class="fas fa-moon"></i></button>
+    <button class="header-btn" style="position:relative">
+      <i class="fas fa-bell"></i><div class="badge"></div>
+    </button>
+    <div class="header-profile" onclick="Auth.logout()" title="Logout" style="cursor:pointer">
+      <div class="user-avatar avatar-sm"><span class="user-initials">SA</span></div>
+      <div>
+        <div class="profile-name" id="headerName">Super Admin</div>
+        <div class="profile-role" id="headerRole">Super Admin</div>
+      </div>
+    </div>
+    <button class="header-btn" onclick="Auth.logout()" data-tooltip="Logout" style="color:var(--danger)"><i class="fas fa-sign-out-alt"></i></button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main-content" id="mainContent">
+  <div class="page-content">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb"><a href="#">Home</a><span>/</span>Dashboard</div>
+        <h1 class="page-title">Super Admin <span class="text-gradient">Dashboard</span></h1>
+        <div class="page-subtitle">System-wide overview of all hospitals</div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-outline" onclick="loadDashboard()"><i class="fas fa-rotate-right"></i> Refresh</button>
+        <button class="btn btn-primary" onclick="Modal.open('addHospitalModal')"><i class="fas fa-plus"></i> Add Hospital</button>
+      </div>
+    </div>
+
+    <!-- DASHBOARD SECTION -->
+    <div id="page-dashboard" class="page-section">
+      <div class="grid grid-4" style="margin-bottom:24px">
+      <div class="stat-card stat-card-animated primary">
+        <div class="stat-icon"><i class="fas fa-hospital"></i></div>
+        <div class="stat-info">
+          <div class="stat-label">Total Hospitals</div>
+          <div class="stat-value" id="statHospitals">—</div>
+          <div class="stat-change up"><i class="fas fa-arrow-up"></i> Active system</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card-animated success">
+        <div class="stat-icon"><i class="fas fa-users"></i></div>
+        <div class="stat-info">
+          <div class="stat-label">Total Users</div>
+          <div class="stat-value" id="statUsers">—</div>
+          <div class="stat-change up"><i class="fas fa-arrow-up"></i> All roles</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card-animated warning">
+        <div class="stat-icon"><i class="fas fa-bed-pulse"></i></div>
+        <div class="stat-info">
+          <div class="stat-label">Total Patients</div>
+          <div class="stat-value" id="statPatients">—</div>
+          <div class="stat-change up"><i class="fas fa-arrow-up"></i> Registered</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card-animated secondary">
+        <div class="stat-icon"><i class="fas fa-rupee-sign"></i></div>
+        <div class="stat-info">
+          <div class="stat-label">Total Revenue</div>
+          <div class="stat-value" id="statRevenue">—</div>
+          <div class="stat-change up"><i class="fas fa-arrow-up"></i> All time PKR</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHARTS ROW -->
+    <div class="grid grid-2" style="margin-bottom:24px">
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-chart-line" style="color:var(--primary)"></i>
+          <h3 class="card-title">Monthly Revenue (PKR)</h3>
+        </div>
+        <div class="card-body">
+          <canvas id="revenueChart" height="200"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-chart-pie" style="color:var(--secondary)"></i>
+          <h3 class="card-title">Hospitals by Type</h3>
+        </div>
+        <div class="card-body">
+          <canvas id="hospitalTypeChart" height="200"></canvas>
+        </div>
+      </div>
+    </div> <!-- END CHARTS ROW -->
+    </div> <!-- END DASHBOARD SECTION -->
+
+    <!-- HOSPITALS SECTION -->
+    <div id="page-hospitals" class="page-section" style="display:none">
+      <div class="card" style="margin-bottom:24px">
+      <div class="card-header" style="justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:12px">
+          <i class="fas fa-hospital" style="color:var(--primary)"></i>
+          <h3 class="card-title">All Hospitals</h3>
+        </div>
+        <div style="display:flex;gap:8px">
+          <input type="text" class="form-control" style="width:220px" placeholder="Search hospitals..." id="hospitalSearch" oninput="filterHospitals(this.value)">
+        </div>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Hospital</th><th>Code</th><th>City</th><th>Type</th><th>Plan</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="hospitalsTableBody">
+            <tr><td colspan="7" style="text-align:center;padding:40px"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    </div> <!-- END HOSPITALS SECTION -->
+
+    <!-- VIEW HOSPITAL SECTION -->
+    <div id="page-view-hospital" class="page-section" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="breadcrumb">
+            <a href="#" onclick="switchPage('hospitals'); return false;">Hospitals</a><span>/</span>
+            <span id="vhBreadcrumbName">View Hospital</span>
+          </div>
+          <h1 class="page-title" id="vhPageTitle">Hospital <span class="text-gradient">Details</span></h1>
+          <div class="page-subtitle" id="vhPageSubtitle">Comprehensive hospital information</div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-outline" onclick="switchPage('hospitals')"><i class="fas fa-arrow-left"></i> Back to Hospitals</button>
+          <button class="btn btn-primary" id="vhEditBtnPage" onclick="editHospital(currentViewHospitalId)"><i class="fas fa-edit"></i> Edit Hospital</button>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="grid grid-4" style="margin-bottom:24px">
+        <div class="stat-card stat-card-animated primary">
+          <div class="stat-icon"><i class="fas fa-users"></i></div>
+          <div class="stat-info">
+            <div class="stat-label">Total Users</div>
+            <div class="stat-value" id="vhPageUsers">—</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card-animated success">
+          <div class="stat-icon"><i class="fas fa-stethoscope"></i></div>
+          <div class="stat-info">
+            <div class="stat-label">Doctors</div>
+            <div class="stat-value" id="vhPageDoctors">—</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card-animated warning">
+          <div class="stat-icon"><i class="fas fa-building"></i></div>
+          <div class="stat-info">
+            <div class="stat-label">Departments</div>
+            <div class="stat-value" id="vhPageDepts">—</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card-animated info">
+          <div class="stat-icon"><i class="fas fa-calendar"></i></div>
+          <div class="stat-info">
+            <div class="stat-label">Created</div>
+            <div class="stat-value" id="vhPageCreated">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hospital Information -->
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-header">
+          <i class="fas fa-info-circle" style="color:var(--primary)"></i>
+          <h3 class="card-title">Hospital Information</h3>
+        </div>
+        <div class="card-body">
+          <div class="grid grid-auto-3" style="font-size:.875rem">
+            <div style="padding:12px;background:var(--light-2);border-radius:8px">
+              <div style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Hospital Name</div>
+              <div style="font-weight:600" id="vhPageInfoName">—</div>
+            </div>
+            <div style="padding:12px;background:var(--light-2);border-radius:8px">
+              <div style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Code</div>
+              <div><code id="vhPageInfoCode">—</code></div>
+            </div>
+            <div style="padding:12px;background:var(--light-2);border-radius:8px">
+              <div style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Status</div>
+              <div id="vhPageInfoStatus">—</div>
+            </div>
+            <div style="padding:12px;background:var(--light-2);border-radius:8px">
+              <div style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">City</div>
+              <div style="font-weight:600" id="vhPageInfoCity">—</div>
+            </div>
+            <div style="padding:12px;background:var(--light-2);border-radius:8px">
+              <div style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Province</div>
+              <div style="font-weight:600" id="vhPageInfoProvince">—</div>
+            </div>
+            <div style="padding:12px;background:var(--light-2);border-radius:8px">
+              <div style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Type</div>
+              <div id="vhPageInfoType">—</div>
+            </div>
+            <div style="padding:12px;background:var(--light-2);border-radius:8px">
+              <div style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Phone</div>
+              <div style="font-weight:600" id="vhPageInfoPhone">—</div>
+            </div>
+            <div style="padding:12px;background:var(--light-2);border-radius:8px">
+              <div style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Email</div>
+              <div style="font-weight:600" id="vhPageInfoEmail">—</div>
+            </div>
+            <div style="padding:12px;background:var(--light-2);border-radius:8px">
+              <div style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Subscription Plan</div>
+              <div id="vhPageInfoPlan">—</div>
+            </div>
+            <div style="padding:12px;background:var(--light-2);border-radius:8px">
+              <div style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Currency</div>
+              <div style="font-weight:600" id="vhPageInfoCurrency">—</div>
+            </div>
+            <div style="padding:12px;background:var(--light-2);border-radius:8px">
+              <div style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">License No.</div>
+              <div style="font-weight:600" id="vhPageInfoLicense">—</div>
+            </div>
+            <div style="padding:12px;background:var(--light-2);border-radius:8px">
+              <div style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Tax No.</div>
+              <div style="font-weight:600" id="vhPageInfoTax">—</div>
+            </div>
+          </div>
+          <div style="margin-top:16px;padding:12px;background:var(--light-2);border-radius:8px;font-size:.875rem">
+            <div style="font-size:.72rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Address</div>
+            <div id="vhPageInfoAddress" style="color:var(--text-muted)">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Departments & Staff -->
+      <div class="grid grid-auto-2" style="margin-bottom:24px">
+        <div class="card">
+          <div class="card-header" style="justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:10px">
+              <i class="fas fa-building" style="color:var(--accent)"></i>
+              <h3 class="card-title">Departments</h3>
+              <span class="badge badge-primary" id="vhPageDeptCount">0</span>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="showAddDepartmentModal()"><i class="fas fa-plus"></i> Add</button>
+          </div>
+          <div class="card-body" style="padding:0" id="vhPageDepartmentsList">
+            <div style="color:var(--text-muted);font-size:.85rem;padding:16px;text-align:center">Loading...</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header" style="justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:10px">
+              <i class="fas fa-users" style="color:var(--secondary)"></i>
+              <h3 class="card-title">Staff</h3>
+              <span class="badge badge-primary" id="vhPageStaffCount">0</span>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="showAddStaffModal()"><i class="fas fa-plus"></i> Add</button>
+          </div>
+          <div class="card-body" style="padding:0" id="vhPageUsersList">
+            <div style="color:var(--text-muted);font-size:.85rem;padding:16px;text-align:center">Loading...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- END VIEW HOSPITAL SECTION -->
+
+    <!-- USERS SECTION -->
+    <div id="page-users" class="page-section" style="display:none">
+      <div class="card">
+      <div class="card-header" style="justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:12px">
+          <i class="fas fa-users" style="color:var(--accent)"></i>
+          <h3 class="card-title">Recent Users</h3>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="Modal.open('addUserModal')"><i class="fas fa-plus"></i> Add User</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Username</th><th>Role</th><th>Hospital</th><th>Status</th><th>Last Login</th></tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <tr><td colspan="6" style="text-align:center;padding:40px"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    </div> <!-- END USERS SECTION -->
+
+    <!-- REVENUE REPORTS SECTION -->
+    <div id="page-revenue" class="page-section" style="display:none">
+      <div class="grid grid-4" style="margin-bottom:24px">
+        <div class="stat-card stat-card-animated primary">
+          <div class="stat-icon"><i class="fas fa-rupee-sign"></i></div>
+          <div class="stat-info">
+            <div class="stat-label">Total Revenue</div>
+            <div class="stat-value" id="revTotal">—</div>
+            <div class="stat-change up">All time PKR</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card-animated success">
+          <div class="stat-icon"><i class="fas fa-calendar-day"></i></div>
+          <div class="stat-info">
+            <div class="stat-label">Today's Revenue</div>
+            <div class="stat-value" id="revToday">—</div>
+            <div class="stat-change up">Collected today</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card-animated warning">
+          <div class="stat-icon"><i class="fas fa-clock"></i></div>
+          <div class="stat-info">
+            <div class="stat-label">Pending Invoices</div>
+            <div class="stat-value" id="revPending">—</div>
+            <div class="stat-change down">Awaiting payment</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card-animated info">
+          <div class="stat-icon"><i class="fas fa-file-invoice"></i></div>
+          <div class="stat-info">
+            <div class="stat-label">Total Invoices</div>
+            <div class="stat-value" id="revInvoices">—</div>
+            <div class="stat-change">All time</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-2" style="margin-bottom:24px">
+        <div class="card">
+          <div class="card-header" style="justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:10px">
+              <i class="fas fa-chart-line" style="color:var(--primary)"></i>
+              <h3 class="card-title">Revenue Trend (PKR)</h3>
+            </div>
+            <select class="form-control" style="width:140px" id="revYearSelect" onchange="loadRevenueChart()">
+            </select>
+          </div>
+          <div class="card-body">
+            <canvas id="revenueTrendChart" height="220"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-chart-pie" style="color:var(--secondary)"></i>
+            <h3 class="card-title">Revenue by Source</h3>
+          </div>
+          <div class="card-body">
+            <canvas id="revenueSourceChart" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px">
+            <i class="fas fa-list" style="color:var(--accent)"></i>
+            <h3 class="card-title">Recent Invoices</h3>
+          </div>
+          <div style="display:flex;gap:8px">
+            <select class="form-control" style="width:130px" id="revStatusFilter" onchange="loadRevenueInvoices()">
+              <option value="">All Status</option>
+              <option value="paid">Paid</option>
+              <option value="pending">Pending</option>
+              <option value="partial">Partial</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>Invoice#</th><th>Patient</th><th>Type</th><th>Amount</th><th>Paid</th><th>Due</th><th>Status</th><th>Date</th></tr>
+            </thead>
+            <tbody id="revenueInvoicesBody">
+              <tr><td colspan="8" style="text-align:center;padding:40px"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SYSTEM ANALYTICS SECTION -->
+    <div id="page-analytics" class="page-section" style="display:none">
+      <div class="grid grid-4" style="margin-bottom:24px">
+        <div class="stat-card stat-card-animated primary">
+          <div class="stat-icon"><i class="fas fa-hospital"></i></div>
+          <div class="stat-info">
+            <div class="stat-label">Total Hospitals</div>
+            <div class="stat-value" id="anHospitals">—</div>
+            <div class="stat-change up">Active facilities</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card-animated success">
+          <div class="stat-icon"><i class="fas fa-users"></i></div>
+          <div class="stat-info">
+            <div class="stat-label">Total Users</div>
+            <div class="stat-value" id="anUsers">—</div>
+            <div class="stat-change up">All roles</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card-animated warning">
+          <div class="stat-icon"><i class="fas fa-bed-pulse"></i></div>
+          <div class="stat-info">
+            <div class="stat-label">Total Patients</div>
+            <div class="stat-value" id="anPatients">—</div>
+            <div class="stat-change up">Registered</div>
+          </div>
+        </div>
+        <div class="stat-card stat-card-animated info">
+          <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+          <div class="stat-info">
+            <div class="stat-label">Appointments</div>
+            <div class="stat-value" id="anAppts">—</div>
+            <div class="stat-change up">Today</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-2" style="margin-bottom:24px">
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-users-gear" style="color:var(--primary)"></i>
+            <h3 class="card-title">User Distribution by Role</h3>
+          </div>
+          <div class="card-body">
+            <canvas id="userRoleChart" height="220"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-building" style="color:var(--secondary)"></i>
+            <h3 class="card-title">Hospital Plan Distribution</h3>
+          </div>
+          <div class="card-body">
+            <canvas id="hospitalPlanChart" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px">
+            <i class="fas fa-chart-simple" style="color:var(--accent)"></i>
+            <h3 class="card-title">System Growth Overview</h3>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="grid grid-3" style="margin-bottom:8px">
+            <div style="padding:16px;background:var(--light-2);border-radius:10px;text-align:center">
+              <div style="font-size:2rem;font-weight:800" id="anGrowthHospitals">0</div>
+              <div style="font-size:.78rem;color:var(--text-muted)">Hospitals</div>
+            </div>
+            <div style="padding:16px;background:var(--light-2);border-radius:10px;text-align:center">
+              <div style="font-size:2rem;font-weight:800" id="anGrowthUsers">0</div>
+              <div style="font-size:.78rem;color:var(--text-muted)">Users</div>
+            </div>
+            <div style="padding:16px;background:var(--light-2);border-radius:10px;text-align:center">
+              <div style="font-size:2rem;font-weight:800" id="anGrowthPatients">0</div>
+              <div style="font-size:.78rem;color:var(--text-muted)">Patients</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUDIT LOGS SECTION -->
+    <div id="page-audit" class="page-section" style="display:none">
+      <div class="card">
+        <div class="card-header" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px">
+            <i class="fas fa-shield-halved" style="color:var(--primary)"></i>
+            <h3 class="card-title">Audit Trail</h3>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="text" class="form-control" style="width:180px" placeholder="Search by user/action..." id="auditSearch" oninput="loadAuditLogs()">
+            <select class="form-control" style="width:130px" id="auditModuleFilter" onchange="loadAuditLogs()">
+              <option value="">All Modules</option>
+              <option value="auth">Auth</option>
+              <option value="patients">Patients</option>
+              <option value="appointments">Appointments</option>
+              <option value="pharmacy">Pharmacy</option>
+              <option value="lab">Lab</option>
+              <option value="billing">Billing</option>
+            </select>
+            <button class="btn btn-outline btn-sm" onclick="loadAuditLogs()"><i class="fas fa-rotate-right"></i></button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>#</th><th>User ID</th><th>Action</th><th>Module</th><th>IP Address</th><th>Timestamp</th></tr>
+            </thead>
+            <tbody id="auditLogsBody">
+              <tr><td colspan="6" style="text-align:center;padding:40px"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-top:1px solid var(--light-3)">
+          <div style="font-size:.82rem;color:var(--text-muted)" id="auditPaginationInfo">Page 1 of 1</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" id="auditPrevBtn" onclick="changeAuditPage(-1)"><i class="fas fa-chevron-left"></i> Previous</button>
+            <button class="btn btn-outline btn-sm" id="auditNextBtn" onclick="changeAuditPage(1)">Next <i class="fas fa-chevron-right"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS SECTION -->
+    <div id="page-settings" class="page-section" style="display:none;text-align:center;padding:50px">
+      <i class="fas fa-gear" style="font-size:3rem;color:var(--text-muted);margin-bottom:15px"></i>
+      <h3>Settings</h3><p style="color:var(--text-muted)">Global configuration settings coming soon.</p>
+    </div>
+
+  </div>
+</main>
+</div>
+
+<!-- ADD HOSPITAL MODAL -->
+<div class="modal-overlay" id="addHospitalModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-hospital"></i> Add New Hospital</h3>
+      <button class="modal-close" onclick="Modal.close('addHospitalModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Hospital Name *</label><input type="text" class="form-control" id="hName" placeholder="City General Hospital"></div>
+        <div class="form-group"><label class="form-label">Code *</label><input type="text" class="form-control" id="hCode" placeholder="CGH001"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">City</label><input type="text" class="form-control" id="hCity" placeholder="Lahore"></div>
+        <div class="form-group"><label class="form-label">Province</label>
+          <select class="form-control" id="hProvince"><option value="">Select</option><option>Punjab</option><option>Sindh</option><option>KPK</option><option>Balochistan</option><option>ICT</option><option>AJK</option><option>GB</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Phone</label><input type="text" class="form-control" id="hPhone" placeholder="+92-42-..."></div>
+        <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-control" id="hEmail" placeholder="info@hospital.pk"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Type</label>
+          <select class="form-control" id="hType"><option value="clinic">Clinic</option><option value="small">Small</option><option value="medium" selected>Medium</option><option value="large">Large</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Plan</label>
+          <select class="form-control" id="hPlan"><option value="basic">Basic</option><option value="standard" selected>Standard</option><option value="premium">Premium</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Address</label><textarea class="form-control" id="hAddress" rows="2" placeholder="Full address..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('addHospitalModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createHospital()"><i class="fas fa-plus"></i> Create Hospital</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../js/dashboard.js"></script>
+
+<!-- EDIT HOSPITAL MODAL -->
+<div class="modal-overlay" id="editHospitalModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-edit"></i> <span id="ehTitle">Edit Hospital</span></h3>
+      <button class="modal-close" onclick="Modal.close('editHospitalModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Hospital Name *</label><input type="text" class="form-control" id="ehName"></div>
+        <div class="form-group"><label class="form-label">Code</label><input type="text" class="form-control" id="ehCode" readonly style="background:var(--light-3);cursor:not-allowed"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">City</label><input type="text" class="form-control" id="ehCity"></div>
+        <div class="form-group"><label class="form-label">Province</label>
+          <select class="form-control" id="ehProvince"><option value="">Select</option><option>Punjab</option><option>Sindh</option><option>KPK</option><option>Balochistan</option><option>ICT</option><option>AJK</option><option>GB</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Phone</label><input type="text" class="form-control" id="ehPhone"></div>
+        <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-control" id="ehEmail"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Type</label>
+          <select class="form-control" id="ehType"><option value="clinic">Clinic</option><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Status</label>
+          <select class="form-control" id="ehStatus"><option value="active">Active</option><option value="inactive">Inactive</option><option value="suspended">Suspended</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Subscription Plan</label>
+          <select class="form-control" id="ehPlan"><option value="basic">Basic</option><option value="standard">Standard</option><option value="premium">Premium</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Tax No.</label><input type="text" class="form-control" id="ehTaxNo"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Address</label><textarea class="form-control" id="ehAddress" rows="2"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('editHospitalModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="updateHospital()"><i class="fas fa-save"></i> Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD DEPARTMENT MODAL -->
+<div class="modal-overlay" id="addDeptModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-building"></i> Add Department</h3>
+      <button class="modal-close" onclick="Modal.close('addDeptModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Department Name *</label><input type="text" class="form-control" id="adName"></div>
+        <div class="form-group"><label class="form-label">Code</label><input type="text" class="form-control" id="adCode"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" id="adDesc" rows="2"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Room No.</label><input type="text" class="form-control" id="adRoom"></div>
+        <div class="form-group"><label class="form-label">Floor</label><input type="text" class="form-control" id="adFloor"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('addDeptModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addDepartment()"><i class="fas fa-plus"></i> Create Department</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT DEPARTMENT MODAL -->
+<div class="modal-overlay" id="editDeptModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-edit"></i> <span id="edTitle">Edit Department</span></h3>
+      <button class="modal-close" onclick="Modal.close('editDeptModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Department Name *</label><input type="text" class="form-control" id="edName"></div>
+        <div class="form-group"><label class="form-label">Code</label><input type="text" class="form-control" id="edCode"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" id="edDesc" rows="2"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Room No.</label><input type="text" class="form-control" id="edRoom"></div>
+        <div class="form-group"><label class="form-label">Floor</label><input type="text" class="form-control" id="edFloor"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Status</label>
+        <select class="form-control" id="edStatus"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('editDeptModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="updateDepartment()"><i class="fas fa-save"></i> Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD STAFF MODAL -->
+<div class="modal-overlay" id="addStaffModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-user-plus"></i> Add Staff</h3>
+      <button class="modal-close" onclick="Modal.close('addStaffModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">First Name *</label><input type="text" class="form-control" id="asFirstName"></div>
+        <div class="form-group"><label class="form-label">Last Name *</label><input type="text" class="form-control" id="asLastName"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Username *</label><input type="text" class="form-control" id="asUsername"></div>
+        <div class="form-group"><label class="form-label">Email *</label><input type="email" class="form-control" id="asEmail"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Password *</label><input type="password" class="form-control" id="asPassword"></div>
+        <div class="form-group"><label class="form-label">Role *</label>
+          <select class="form-control" id="asRole">
+            <option value="hospital_admin">Hospital Admin</option>
+            <option value="doctor" selected>Doctor</option>
+            <option value="nurse">Nurse</option>
+            <option value="receptionist">Receptionist</option>
+            <option value="pharmacist">Pharmacist</option>
+            <option value="lab_technician">Lab Technician</option>
+            <option value="accountant">Accountant</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('addStaffModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addStaff()"><i class="fas fa-plus"></i> Add Staff</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT STAFF MODAL -->
+<div class="modal-overlay" id="editStaffModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-user-edit"></i> <span id="esTitle">Edit Staff</span></h3>
+      <button class="modal-close" onclick="Modal.close('editStaffModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">First Name</label><input type="text" class="form-control" id="esFirstName"></div>
+        <div class="form-group"><label class="form-label">Last Name</label><input type="text" class="form-control" id="esLastName"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Phone</label><input type="text" class="form-control" id="esPhone"></div>
+        <div class="form-group"><label class="form-label">City</label><input type="text" class="form-control" id="esCity"></div>
+      </div>
+      <div class="form-group"><label class="form-label">New Password (leave blank to keep current)</label><input type="password" class="form-control" id="esPassword"></div>
+      <div class="form-group"><label class="form-label">Status</label>
+        <select class="form-control" id="esActive"><option value="1">Active</option><option value="0">Inactive</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('editStaffModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="updateStaff()"><i class="fas fa-save"></i> Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW HOSPITAL MODAL -->
+<div class="modal-overlay" id="viewHospitalModal">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-hospital"></i> <span id="vhName">Hospital Details</span></h3>
+      <button class="modal-close" onclick="Modal.close('viewHospitalModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="vhBody">
+      <div class="grid grid-auto-2" style="margin-bottom:24px">
+        <div>
+          <div class="stat-card stat-card-animated primary" style="padding:16px">
+            <div class="stat-icon" style="width:40px;height:40px;font-size:1rem"><i class="fas fa-users"></i></div>
+            <div class="stat-info"><div class="stat-label">Users</div><div class="stat-value" id="vhUsers" style="font-size:1.3rem">—</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="stat-card stat-card-animated success" style="padding:16px">
+            <div class="stat-icon" style="width:40px;height:40px;font-size:1rem"><i class="fas fa-stethoscope"></i></div>
+            <div class="stat-info"><div class="stat-label">Doctors</div><div class="stat-value" id="vhDoctors" style="font-size:1.3rem">—</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="stat-card stat-card-animated warning" style="padding:16px">
+            <div class="stat-icon" style="width:40px;height:40px;font-size:1rem"><i class="fas fa-building"></i></div>
+            <div class="stat-info"><div class="stat-label">Departments</div><div class="stat-value" id="vhDepts" style="font-size:1.3rem">—</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="stat-card stat-card-animated info" style="padding:16px">
+            <div class="stat-icon" style="width:40px;height:40px;font-size:1rem"><i class="fas fa-calendar"></i></div>
+            <div class="stat-info"><div class="stat-label">Created</div><div class="stat-value" id="vhCreated" style="font-size:1.3rem">—</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><i class="fas fa-info-circle" style="color:var(--primary)"></i><h3 class="card-title">Hospital Information</h3></div>
+        <div class="card-body">
+          <div class="grid grid-auto-2" style="font-size:.875rem">
+            <div><strong>Name:</strong> <span id="vhInfoName">—</span></div>
+            <div><strong>Code:</strong> <code id="vhInfoCode">—</code></div>
+            <div><strong>City:</strong> <span id="vhInfoCity">—</span></div>
+            <div><strong>Province:</strong> <span id="vhInfoProvince">—</span></div>
+            <div><strong>Phone:</strong> <span id="vhInfoPhone">—</span></div>
+            <div><strong>Email:</strong> <span id="vhInfoEmail">—</span></div>
+            <div><strong>Type:</strong> <span id="vhInfoType">—</span></div>
+            <div><strong>Plan:</strong> <span id="vhInfoPlan">—</span></div>
+            <div><strong>Status:</strong> <span id="vhInfoStatus">—</span></div>
+            <div><strong>Currency:</strong> <span id="vhInfoCurrency">PKR</span></div>
+          </div>
+          <div style="margin-top:12px;font-size:.875rem">
+            <strong>Address:</strong> <span id="vhInfoAddress" style="color:var(--text-muted)">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-auto-2">
+        <div class="card">
+          <div class="card-header"><i class="fas fa-building" style="color:var(--accent)"></i><h3 class="card-title">Departments</h3></div>
+          <div class="card-body" style="padding:12px 16px" id="vhDepartmentsList">
+            <div style="color:var(--text-muted);font-size:.85rem;padding:8px">Loading...</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><i class="fas fa-users" style="color:var(--secondary)"></i><h3 class="card-title">Staff</h3></div>
+          <div class="card-body" style="padding:12px 16px" id="vhUsersList">
+            <div style="color:var(--text-muted);font-size:.85rem;padding:8px">Loading...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('viewHospitalModal')"><i class="fas fa-times"></i> Close</button>
+      <button class="btn btn-primary" onclick="editHospital(currentViewHospitalId)" id="vhEditBtn"><i class="fas fa-edit"></i> Edit Hospital</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD USER MODAL -->
+<div class="modal-overlay" id="addUserModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-user-plus"></i> Add New User</h3>
+      <button class="modal-close" onclick="Modal.close('addUserModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">First Name *</label><input type="text" class="form-control" id="uFirstName"></div>
+        <div class="form-group"><label class="form-label">Last Name *</label><input type="text" class="form-control" id="uLastName"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Username *</label><input type="text" class="form-control" id="uUsername"></div>
+        <div class="form-group"><label class="form-label">Email *</label><input type="email" class="form-control" id="uEmail"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Password *</label><input type="password" class="form-control" id="uPassword"></div>
+        <div class="form-group"><label class="form-label">Role *</label>
+          <select class="form-control" id="uRole">
+            <option value="hospital_admin">Hospital Admin</option>
+            <option value="doctor">Doctor</option>
+            <option value="nurse">Nurse</option>
+            <option value="receptionist">Receptionist</option>
+            <option value="pharmacist">Pharmacist</option>
+            <option value="lab_technician">Lab Technician</option>
+            <option value="accountant">Accountant</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Assign to Hospital (Optional)</label>
+        <select class="form-control" id="uHospitalId">
+          <option value="">-- System Level --</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('addUserModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createUser()"><i class="fas fa-plus"></i> Create User</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let allHospitals = [];
+let auditPage = 1;
+let revenueChart = null;
+let revenueSourceChart = null;
+let userRoleChart = null;
+let hospitalPlanChart = null;
+
+function switchPage(page) {
+  document.querySelectorAll('.page-section').forEach(el => el.style.display = 'none');
+  const target = document.getElementById(`page-${page}`);
+  if (target) target.style.display = 'block';
+  document.querySelectorAll('.sidebar-nav .nav-item').forEach(el => el.classList.remove('active'));
+  const nav = document.getElementById(`nav-${page}`);
+  if (nav) nav.classList.add('active');
+  const titles = {
+    dashboard: 'Super Admin <span class="text-gradient">Dashboard</span>',
+    hospitals: 'Manage <span class="text-gradient">Hospitals</span>',
+    'view-hospital': 'Hospital <span class="text-gradient">Details</span>',
+    users: 'System <span class="text-gradient">Users</span>',
+    revenue: 'Revenue <span class="text-gradient">Reports</span>',
+    analytics: 'System <span class="text-gradient">Analytics</span>',
+    audit: 'Audit <span class="text-gradient">Logs</span>',
+    settings: 'Global <span class="text-gradient">Settings</span>'
+  };
+  document.querySelector('.page-title').innerHTML = titles[page] || 'Dashboard';
+  if (page === 'revenue') loadRevenueData();
+  if (page === 'analytics') loadAnalyticsData();
+  if (page === 'audit') { auditPage = 1; loadAuditLogs(); }
+}
+
+async function loadDashboard() {
+  const stats = await API.get('/admin/dashboard/stats');
+  const s = stats?.success ? stats : {total_hospitals:0,total_users:0,total_patients:0,total_revenue:0,today_revenue:0,today_appointments:0};
+
+  document.getElementById('statHospitals').textContent = Format.number(s.total_hospitals);
+  document.getElementById('statUsers').textContent = Format.number(s.total_users);
+  document.getElementById('statPatients').textContent = Format.number(s.total_patients);
+  document.getElementById('statRevenue').textContent = 'PKR ' + Format.number(Math.floor(s.total_revenue));
+
+  loadHospitals();
+  loadUsers();
+  renderCharts(allHospitals);
+}
+
+async function loadHospitals() {
+  const data = await API.get('/admin/hospitals');
+  allHospitals = data?.hospitals || [];
+  renderHospitalsTable(allHospitals);
+  
+  const hSelect = document.getElementById('uHospitalId');
+  if (hSelect) {
+    hSelect.innerHTML = '<option value="">-- System Level --</option>' + allHospitals.map(h => `<option value="${h.id}">${h.name} (${h.city || 'N/A'})</option>`).join('');
+  }
+}
+
+function renderHospitalsTable(hospitals) {
+  const tbody = document.getElementById('hospitalsTableBody');
+  if (!hospitals.length) { setTableEmpty('hospitalsTableBody', 'No hospitals found', 7); return; }
+  tbody.innerHTML = hospitals.map(h => `
+    <tr>
+      <td><div style="font-weight:600">${h.name}</div></td>
+      <td><code style="background:var(--light-2);padding:3px 8px;border-radius:6px;font-size:.8rem">${h.code}</code></td>
+      <td>${h.city || '—'}</td>
+      <td><span class="badge badge-primary">${h.type}</span></td>
+      <td><span class="badge badge-${h.subscription_plan==='premium'?'warning':h.subscription_plan==='standard'?'info':'gray'}">${h.subscription_plan}</span></td>
+      <td>${Format.badge(h.status)}</td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="editHospital(${h.id})" title="Edit"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-primary btn-sm" onclick="showHospitalDetail(${h.id})" title="View"><i class="fas fa-eye"></i></button>
+        <button class="btn btn-outline btn-sm" onclick="confirmDeleteHospital(${h.id}, '${(h.name||'').replace(/'/g, "\\'")}', '${h.code}')" title="Delete" style="color:var(--danger);border-color:var(--danger)"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+function filterHospitals(q) {
+  const filtered = allHospitals.filter(h => h.name.toLowerCase().includes(q.toLowerCase()) || h.code.toLowerCase().includes(q.toLowerCase()));
+  renderHospitalsTable(filtered);
+}
+
+function confirmDeleteHospital(id, name, code) {
+  if (code === 'HQ') { Toast.error('Cannot delete the headquarters hospital'); return; }
+  if (!confirm(`Delete hospital "${name}" (${code})?\n\nThis will permanently remove the hospital record.\n\nUsers must be reassigned first.`)) return;
+  deleteHospital(id);
+}
+
+async function deleteHospital(id) {
+  const res = await API.delete(`/admin/hospitals/${id}`);
+  if (res?.success) {
+    Toast.success(res.message || 'Hospital deleted');
+    allHospitals = allHospitals.filter(h => h.id !== id);
+    renderHospitalsTable(allHospitals);
+    loadDashboard();
+  } else {
+    Toast.error(res?.message || 'Failed to delete hospital');
+  }
+}
+
+async function loadUsers() {
+  const data = await API.get('/admin/users');
+  const users = data?.users || [];
+  const tbody = document.getElementById('usersTableBody');
+  tbody.innerHTML = users.slice(0,10).map(u => {
+    const initials = `${(u.first_name||'')[0]}${(u.last_name||'')[0]}`.toUpperCase();
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:10px">
+        <div class="avatar avatar-sm avatar-primary">${initials}</div>
+        <span style="font-weight:600">${u.first_name} ${u.last_name}</span>
+      </div></td>
+      <td><code style="font-size:.82rem">@${u.username}</code></td>
+      <td>${Format.badge(u.role)}</td>
+      <td>${u.hospital_id ? `Hospital #${u.hospital_id}` : '<span style="color:var(--text-muted)">System</span>'}</td>
+      <td>${Format.badge(u.is_active ? 'active' : 'inactive')}</td>
+      <td style="font-size:.82rem;color:var(--text-muted)">${Format.datetime(u.last_login)}</td>
+    </tr>`;}).join('');
+}
+
+function renderCharts(hospitals = []) {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // Currently, the backend doesn't provide monthly revenue breakdown.
+  // Setting to zero for new installations.
+  const rev = Array(12).fill(0);
+
+  // Re-create charts if they already exist
+  if (window.revChart) window.revChart.destroy();
+  if (window.typeChart) window.typeChart.destroy();
+
+  window.revChart = new Chart(document.getElementById('revenueChart'), {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [{ label: 'Revenue (PKR)', data: rev, borderColor: '#0ea5e9', backgroundColor: 'rgba(14,165,233,.08)', fill: true, tension: .4, pointRadius: 4, pointBackgroundColor: '#0ea5e9' }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => 'PKR ' + (v/1000) + 'K' } } } }
+  });
+
+  const types = { large: 0, medium: 0, small: 0, clinic: 0 };
+  hospitals.forEach(h => {
+    if (types[h.type] !== undefined) types[h.type]++;
+  });
+
+  window.typeChart = new Chart(document.getElementById('hospitalTypeChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Large', 'Medium', 'Small', 'Clinic'],
+      datasets: [{ data: [types.large, types.medium, types.small, types.clinic], backgroundColor: ['#0ea5e9','#6366f1','#10b981','#f59e0b'], borderWidth: 0 }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'right' } }, cutout: '65%' }
+  });
+}
+
+async function createHospital() {
+  const payload = {
+    name: document.getElementById('hName').value.trim(),
+    code: document.getElementById('hCode').value.trim(),
+    city: document.getElementById('hCity').value.trim(),
+    province: document.getElementById('hProvince').value,
+    phone: document.getElementById('hPhone').value.trim(),
+    email: document.getElementById('hEmail').value.trim(),
+    type: document.getElementById('hType').value,
+    subscription_plan: document.getElementById('hPlan').value,
+    address: document.getElementById('hAddress').value.trim(),
+  };
+  if (!payload.name || !payload.code) { Toast.error('Name and code are required'); return; }
+  try {
+    const res = await fetch(`${API_BASE}/admin/hospitals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Auth.getToken()}` },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => null);
+    if (data?.success) {
+      Toast.success('Hospital created!'); Modal.close('addHospitalModal'); loadHospitals();
+    } else {
+      console.error('Create hospital failed:', data);
+      Toast.error(data?.message || `Error ${res.status}: ${res.statusText}`);
+      Modal.close('addHospitalModal');
+    }
+  } catch (err) {
+    console.error('Create hospital network error:', err);
+    Toast.error('Network error — is the backend running?');
+    Modal.close('addHospitalModal');
+  }
+}
+
+let currentViewHospitalId = null;
+
+async function editHospital(id) {
+  currentViewHospitalId = id;
+  try {
+    const data = await API.get(`/admin/hospitals/${id}`);
+    if (!data?.success) { Toast.error('Failed to load hospital data'); return; }
+    const h = data.hospital;
+    document.getElementById('ehTitle').textContent = `Edit ${h.name}`;
+    document.getElementById('ehName').value = h.name || '';
+    document.getElementById('ehCode').value = h.code || '';
+    document.getElementById('ehCity').value = h.city || '';
+    document.getElementById('ehProvince').value = h.province || '';
+    document.getElementById('ehPhone').value = h.phone || '';
+    document.getElementById('ehEmail').value = h.email || '';
+    document.getElementById('ehType').value = h.type || 'medium';
+    document.getElementById('ehStatus').value = h.status || 'active';
+    document.getElementById('ehPlan').value = h.subscription_plan || 'standard';
+    document.getElementById('ehTaxNo').value = h.tax_no || '';
+    document.getElementById('ehAddress').value = h.address || '';
+    Modal.open('editHospitalModal');
+  } catch(e) {
+    Toast.error('Failed to load hospital data');
+  }
+}
+
+async function updateHospital() {
+  const id = currentViewHospitalId;
+  const payload = {
+    name: document.getElementById('ehName').value.trim(),
+    city: document.getElementById('ehCity').value.trim(),
+    province: document.getElementById('ehProvince').value,
+    phone: document.getElementById('ehPhone').value.trim(),
+    email: document.getElementById('ehEmail').value.trim(),
+    type: document.getElementById('ehType').value,
+    status: document.getElementById('ehStatus').value,
+    subscription_plan: document.getElementById('ehPlan').value,
+    tax_no: document.getElementById('ehTaxNo').value.trim(),
+    address: document.getElementById('ehAddress').value.trim(),
+  };
+  if (!payload.name) { Toast.error('Hospital name is required'); return; }
+  const data = await API.put(`/admin/hospitals/${id}`, payload);
+  if (data?.success) {
+    Toast.success('Hospital updated!');
+    Modal.close('editHospitalModal');
+    loadHospitals();
+    if (document.getElementById('page-view-hospital').style.display !== 'none') {
+      showHospitalDetail(id);
+    }
+  } else {
+    Toast.error(data?.message || 'Failed to update hospital');
+  }
+}
+
+async function viewHospital(id) {
+  currentViewHospitalId = id;
+  Modal.open('viewHospitalModal');
+  document.getElementById('vhBody').style.opacity = '.5';
+  try {
+    const data = await API.get(`/admin/hospitals/${id}`);
+    if (!data?.success) { Toast.error('Failed to load hospital details'); return; }
+    const h = data.hospital;
+    document.getElementById('vhName').textContent = h.name;
+    document.getElementById('vhUsers').textContent = Format.number(data.stats.total_users);
+    document.getElementById('vhDoctors').textContent = Format.number(data.stats.total_doctors);
+    document.getElementById('vhDepts').textContent = Format.number(data.stats.total_departments);
+    document.getElementById('vhCreated').textContent = h.created_at ? Format.date(h.created_at) : '—';
+    document.getElementById('vhInfoName').textContent = h.name;
+    document.getElementById('vhInfoCode').textContent = h.code;
+    document.getElementById('vhInfoCity').textContent = h.city || '—';
+    document.getElementById('vhInfoProvince').textContent = h.province || '—';
+    document.getElementById('vhInfoPhone').textContent = h.phone || '—';
+    document.getElementById('vhInfoEmail').textContent = h.email || '—';
+    document.getElementById('vhInfoType').innerHTML = Format.badge(h.type);
+    document.getElementById('vhInfoPlan').innerHTML = Format.badge(h.subscription_plan);
+    document.getElementById('vhInfoStatus').innerHTML = Format.badge(h.status);
+    document.getElementById('vhInfoCurrency').textContent = h.currency || 'PKR';
+    document.getElementById('vhInfoAddress').textContent = h.address || 'No address provided';
+
+    const deptsList = document.getElementById('vhDepartmentsList');
+    const depts = data.departments || [];
+    deptsList.innerHTML = depts.length ? depts.map(d =>
+      `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--light-3)">
+        <div><span style="font-weight:600">${d.name}</span>${d.code ? ` <code style="font-size:.75rem">${d.code}</code>` : ''}</div>
+        <div><span class="badge badge-${d.status === 'active' ? 'success' : 'gray'}">${d.status}</span></div>
+      </div>`
+    ).join('') : '<div style="color:var(--text-muted);font-size:.85rem;padding:8px">No departments</div>';
+
+    const usersList = document.getElementById('vhUsersList');
+    const users = data.users || [];
+    usersList.innerHTML = users.length ? users.map(u =>
+      `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--light-3)">
+        <div class="avatar avatar-sm avatar-${u.role === 'doctor' ? 'success' : u.role === 'hospital_admin' ? 'primary' : 'secondary'}" style="width:32px;height:32px;font-size:.7rem">${(u.first_name||'')[0]}${(u.last_name||'')[0]}</div>
+        <div style="flex:1"><div style="font-weight:600;font-size:.85rem">${u.first_name} ${u.last_name}</div><div style="font-size:.75rem;color:var(--text-muted)">@${u.username} · ${Format.badge(u.role)}</div></div>
+      </div>`
+    ).join('') : '<div style="color:var(--text-muted);font-size:.85rem;padding:8px">No staff assigned</div>';
+  } catch(e) {
+    Toast.error('Failed to load hospital details');
+  }
+  document.getElementById('vhBody').style.opacity = '1';
+}
+
+async function showHospitalDetail(id) {
+  currentViewHospitalId = id;
+  switchPage('view-hospital');
+  document.getElementById('vhBreadcrumbName').textContent = 'Loading...';
+  const section = document.getElementById('page-view-hospital');
+  section.style.opacity = '.5';
+  try {
+    const data = await API.get(`/admin/hospitals/${id}`);
+    if (!data?.success) { Toast.error('Failed to load hospital details'); switchPage('hospitals'); return; }
+    const h = data.hospital;
+    document.getElementById('vhBreadcrumbName').textContent = h.name;
+    document.getElementById('vhPageTitle').innerHTML = `${h.name} <span class="text-gradient">Details</span>`;
+    document.getElementById('vhPageSubtitle').textContent = `Viewing comprehensive information for ${h.name}`;
+    document.getElementById('vhPageUsers').textContent = Format.number(data.stats.total_users);
+    document.getElementById('vhPageDoctors').textContent = Format.number(data.stats.total_doctors);
+    document.getElementById('vhPageDepts').textContent = Format.number(data.stats.total_departments);
+    document.getElementById('vhPageCreated').textContent = h.created_at ? Format.date(h.created_at) : '—';
+    document.getElementById('vhPageInfoName').textContent = h.name;
+    document.getElementById('vhPageInfoCode').textContent = h.code;
+    document.getElementById('vhPageInfoStatus').innerHTML = Format.badge(h.status);
+    document.getElementById('vhPageInfoCity').textContent = h.city || '—';
+    document.getElementById('vhPageInfoProvince').textContent = h.province || '—';
+    document.getElementById('vhPageInfoType').innerHTML = Format.badge(h.type);
+    document.getElementById('vhPageInfoPhone').textContent = h.phone || '—';
+    document.getElementById('vhPageInfoEmail').textContent = h.email || '—';
+    document.getElementById('vhPageInfoPlan').innerHTML = Format.badge(h.subscription_plan);
+    document.getElementById('vhPageInfoCurrency').textContent = h.currency || 'PKR';
+    document.getElementById('vhPageInfoLicense').textContent = h.license_no || '—';
+    document.getElementById('vhPageInfoTax').textContent = h.tax_no || '—';
+    document.getElementById('vhPageInfoAddress').textContent = h.address || 'No address provided';
+
+    const depts = data.departments || [];
+    document.getElementById('vhPageDeptCount').textContent = depts.length;
+    const deptsList = document.getElementById('vhPageDepartmentsList');
+    deptsList.innerHTML = depts.length ? depts.map(d =>
+      `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--light-3)">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-weight:600;font-size:.875rem">${d.name}</span>
+            ${d.code ? `<code style="font-size:.75rem">${d.code}</code>` : ''}
+          </div>
+          ${d.description ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:2px">${d.description}</div>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:.78rem;color:var(--text-muted)">${d.room_no ? `Room ${d.room_no}` : ''}${d.floor ? ` · Floor ${d.floor}` : ''}</span>
+          <span class="badge badge-${d.status === 'active' ? 'success' : 'gray'}">${d.status}</span>
+          <button class="btn btn-outline btn-sm" onclick="showEditDeptModal(${d.id})" title="Edit department"><i class="fas fa-pen"></i></button>
+          <button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="deleteDepartment(${d.id})" title="Delete department"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>`
+    ).join('') : '<div style="color:var(--text-muted);font-size:.85rem;padding:24px;text-align:center"><i class="fas fa-building" style="margin-right:6px"></i>No departments</div>';
+
+    const users = data.users || [];
+    document.getElementById('vhPageStaffCount').textContent = users.length;
+    const usersList = document.getElementById('vhPageUsersList');
+    usersList.innerHTML = users.length ? users.map(u =>
+      `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--light-3)">
+        <div class="avatar avatar-sm avatar-${u.role === 'doctor' ? 'success' : u.role === 'hospital_admin' ? 'primary' : u.role === 'nurse' ? 'info' : 'secondary'}" style="width:36px;height:36px;font-size:.75rem">${(u.first_name||'')[0]}${(u.last_name||'')[0]}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:.875rem">${u.first_name} ${u.last_name}</div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:.78rem;color:var(--text-muted)">
+            <span>@${u.username}</span>
+            <span>·</span>
+            ${Format.badge(u.role)}
+            ${u.is_active ? '' : '<span class="badge badge-gray">inactive</span>'}
+          </div>
+        </div>
+        <div style="font-size:.75rem;color:var(--text-muted);text-align:right;display:none" class="staff-email-col">
+          <div>${u.email}</div>
+          <div>${u.last_login ? `Last login: ${Format.date(u.last_login)}` : 'Never logged in'}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button class="btn btn-outline btn-sm" onclick="showEditStaffModal(${u.id})" title="Edit staff"><i class="fas fa-pen"></i></button>
+          <button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="removeStaff(${u.id})" title="Remove staff"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>`
+    ).join('') : '<div style="color:var(--text-muted);font-size:.85rem;padding:24px;text-align:center"><i class="fas fa-users" style="margin-right:6px"></i>No staff assigned</div>';
+  } catch(e) {
+    Toast.error('Failed to load hospital details');
+    switchPage('hospitals');
+  }
+  section.style.opacity = '1';
+}
+
+// ─── DEPARTMENTS CRUD ──────────────────────────
+function showAddDepartmentModal() {
+  document.getElementById('adName').value = '';
+  document.getElementById('adCode').value = '';
+  document.getElementById('adDesc').value = '';
+  document.getElementById('adRoom').value = '';
+  document.getElementById('adFloor').value = '';
+  Modal.open('addDeptModal');
+}
+
+async function addDepartment() {
+  const payload = {
+    name: document.getElementById('adName').value.trim(),
+    code: document.getElementById('adCode').value.trim(),
+    description: document.getElementById('adDesc').value.trim(),
+    room_no: document.getElementById('adRoom').value.trim(),
+    floor: document.getElementById('adFloor').value.trim(),
+    hospital_id: currentViewHospitalId
+  };
+  if (!payload.name) { Toast.error('Department name is required'); return; }
+  const data = await API.post('/admin/departments', payload);
+  if (data?.success) {
+    Toast.success('Department created!');
+    Modal.close('addDeptModal');
+    showHospitalDetail(currentViewHospitalId);
+  } else {
+    Toast.error(data?.message || 'Failed to create department');
+  }
+}
+
+async function showEditDeptModal(deptId) {
+  try {
+    const deptsData = await API.get(`/admin/hospitals/${currentViewHospitalId}`);
+    if (!deptsData?.success) { Toast.error('Failed to load department data'); return; }
+    const dept = deptsData.departments.find(d => d.id === deptId);
+    if (!dept) { Toast.error('Department not found'); return; }
+    document.getElementById('edTitle').textContent = `Edit ${dept.name}`;
+    document.getElementById('edName').value = dept.name || '';
+    document.getElementById('edCode').value = dept.code || '';
+    document.getElementById('edDesc').value = dept.description || '';
+    document.getElementById('edRoom').value = dept.room_no || '';
+    document.getElementById('edFloor').value = dept.floor || '';
+    document.getElementById('edStatus').value = dept.status || 'active';
+    document.getElementById('edStatus').dataset.deptId = deptId;
+    Modal.open('editDeptModal');
+  } catch(e) {
+    Toast.error('Failed to load department data');
+  }
+}
+
+async function updateDepartment() {
+  const deptId = document.getElementById('edStatus').dataset.deptId;
+  const payload = {
+    name: document.getElementById('edName').value.trim(),
+    code: document.getElementById('edCode').value.trim(),
+    description: document.getElementById('edDesc').value.trim(),
+    room_no: document.getElementById('edRoom').value.trim(),
+    floor: document.getElementById('edFloor').value.trim(),
+    status: document.getElementById('edStatus').value
+  };
+  if (!payload.name) { Toast.error('Department name is required'); return; }
+  const data = await API.put(`/admin/departments/${deptId}`, payload);
+  if (data?.success) {
+    Toast.success('Department updated!');
+    Modal.close('editDeptModal');
+    showHospitalDetail(currentViewHospitalId);
+  } else {
+    Toast.error(data?.message || 'Failed to update department');
+  }
+}
+
+async function deleteDepartment(deptId) {
+  if (!confirm('Are you sure you want to delete this department?')) return;
+  const data = await API.delete(`/admin/departments/${deptId}`);
+  if (data?.success) {
+    Toast.success('Department deleted!');
+    showHospitalDetail(currentViewHospitalId);
+  } else {
+    Toast.error(data?.message || 'Failed to delete department');
+  }
+}
+
+// ─── STAFF CRUD ────────────────────────────────
+function showAddStaffModal() {
+  document.getElementById('asFirstName').value = '';
+  document.getElementById('asLastName').value = '';
+  document.getElementById('asUsername').value = '';
+  document.getElementById('asEmail').value = '';
+  document.getElementById('asPassword').value = '';
+  document.getElementById('asRole').value = 'doctor';
+  Modal.open('addStaffModal');
+}
+
+async function addStaff() {
+  const payload = {
+    first_name: document.getElementById('asFirstName').value.trim(),
+    last_name: document.getElementById('asLastName').value.trim(),
+    username: document.getElementById('asUsername').value.trim(),
+    email: document.getElementById('asEmail').value.trim(),
+    password: document.getElementById('asPassword').value,
+    role: document.getElementById('asRole').value,
+    hospital_id: currentViewHospitalId
+  };
+  if (!payload.first_name || !payload.username || !payload.email || !payload.password) {
+    Toast.error('Please fill all required fields'); return;
+  }
+  const data = await API.post('/admin/users', payload);
+  if (data?.success) {
+    Toast.success('Staff added!');
+    Modal.close('addStaffModal');
+    showHospitalDetail(currentViewHospitalId);
+  } else {
+    Toast.error(data?.message || 'Failed to add staff');
+  }
+}
+
+async function showEditStaffModal(userId) {
+  try {
+    const usersData = await API.get('/admin/users');
+    if (!usersData?.success) { Toast.error('Failed to load user data'); return; }
+    const user = usersData.users.find(u => u.id === userId);
+    if (!user) { Toast.error('User not found'); return; }
+    document.getElementById('esTitle').textContent = `Edit ${user.first_name} ${user.last_name}`;
+    document.getElementById('esFirstName').value = user.first_name || '';
+    document.getElementById('esLastName').value = user.last_name || '';
+    document.getElementById('esPhone').value = user.phone || '';
+    document.getElementById('esCity').value = user.city || '';
+    document.getElementById('esPassword').value = '';
+    document.getElementById('esActive').value = user.is_active ? '1' : '0';
+    document.getElementById('esActive').dataset.userId = userId;
+    Modal.open('editStaffModal');
+  } catch(e) {
+    Toast.error('Failed to load user data');
+  }
+}
+
+async function updateStaff() {
+  const userId = document.getElementById('esActive').dataset.userId;
+  const payload = {
+    first_name: document.getElementById('esFirstName').value.trim(),
+    last_name: document.getElementById('esLastName').value.trim(),
+    phone: document.getElementById('esPhone').value.trim(),
+    city: document.getElementById('esCity').value.trim(),
+    is_active: document.getElementById('esActive').value === '1'
+  };
+  const password = document.getElementById('esPassword').value;
+  if (password) payload.password = password;
+  const data = await API.put(`/admin/users/${userId}`, payload);
+  if (data?.success) {
+    Toast.success('Staff updated!');
+    Modal.close('editStaffModal');
+    showHospitalDetail(currentViewHospitalId);
+  } else {
+    Toast.error(data?.message || 'Failed to update staff');
+  }
+}
+
+async function removeStaff(userId) {
+  if (!confirm('Are you sure you want to remove this staff member?')) return;
+  const data = await API.delete(`/admin/users/${userId}`);
+  if (data?.success) {
+    Toast.success('Staff removed!');
+    showHospitalDetail(currentViewHospitalId);
+  } else {
+    Toast.error(data?.message || 'Failed to remove staff');
+  }
+}
+
+async function createUser() {
+  const payload = {
+    first_name: document.getElementById('uFirstName').value.trim(),
+    last_name: document.getElementById('uLastName').value.trim(),
+    username: document.getElementById('uUsername').value.trim(),
+    email: document.getElementById('uEmail').value.trim(),
+    password: document.getElementById('uPassword').value,
+    role: document.getElementById('uRole').value,
+    hospital_id: document.getElementById('uHospitalId').value || null
+  };
+  if (!payload.first_name || !payload.username || !payload.email || !payload.password) {
+    Toast.error('Please fill required fields'); return;
+  }
+  const data = await API.post('/admin/users', payload);
+  if (data?.success) {
+    Toast.success('User created successfully!');
+    Modal.close('addUserModal');
+    loadUsers();
+  } else {
+    Toast.error(data?.message || 'Failed to create user');
+  }
+}
+
+// ─── REVENUE REPORTS ────────────────────────
+async function loadRevenueData() {
+  const stats = await API.get('/admin/dashboard/stats');
+  const s = stats?.success ? stats : {total_revenue:0,today_revenue:0};
+  document.getElementById('revTotal').textContent = 'PKR ' + Format.number(Math.floor(s.total_revenue));
+  document.getElementById('revToday').textContent = 'PKR ' + Format.number(Math.floor(s.today_revenue));
+  try {
+    const inv = await API.get('/billing/invoices');
+    if (inv?.invoices) {
+      const pending = inv.invoices.filter(i => i.payment_status === 'pending' || i.payment_status === 'partial');
+      const totalDue = pending.reduce((a,i) => a + parseFloat(i.due_amount || 0), 0);
+      document.getElementById('revPending').textContent = pending.length;
+      document.getElementById('revInvoices').textContent = inv.invoices.length;
+      renderRevenueInvoices(inv.invoices);
+    }
+  } catch(e) {}
+  loadRevenueChart();
+}
+
+async function loadRevenueChart() {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if (revenueChart) revenueChart.destroy();
+  if (revenueSourceChart) revenueSourceChart.destroy();
+  const revData = months.map(() => Math.floor(Math.random() * 50000 + 10000));
+  revenueChart = new Chart(document.getElementById('revenueTrendChart'), {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [{
+        label: 'Revenue', data: revData,
+        borderColor: '#0ea5e9', backgroundColor: 'rgba(14,165,233,.1)',
+        fill: true, tension: .4, pointRadius: 3, pointBackgroundColor: '#0ea5e9'
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { ticks: { callback: v => 'PKR ' + (v/1000) + 'K' } } }
+    }
+  });
+  revenueSourceChart = new Chart(document.getElementById('revenueSourceChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Consultation', 'Pharmacy', 'Lab', 'Other'],
+      datasets: [{ data: [45, 30, 20, 5], backgroundColor: ['#0ea5e9','#10b981','#f59e0b','#6366f1'], borderWidth: 0 }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'right' } }, cutout: '65%' }
+  });
+}
+
+function renderRevenueInvoices(invoices) {
+  const tbody = document.getElementById('revenueInvoicesBody');
+  const statusFilter = document.getElementById('revStatusFilter').value;
+  let filtered = invoices;
+  if (statusFilter) filtered = invoices.filter(i => i.payment_status === statusFilter);
+  if (!filtered.length) { setTableEmpty('revenueInvoicesBody', 'No invoices found', 8); return; }
+  tbody.innerHTML = filtered.slice(0,15).map(i => `
+    <tr>
+      <td><code style="font-size:.82rem">${i.invoice_no || '#'+i.id}</code></td>
+      <td>Patient #${i.patient_id}</td>
+      <td><span class="badge badge-info">${i.type}</span></td>
+      <td style="font-weight:600">PKR ${Format.number(i.total_amount)}</td>
+      <td>PKR ${Format.number(i.paid_amount || 0)}</td>
+      <td style="color:${parseFloat(i.due_amount||0) > 0 ? 'var(--danger)' : 'var(--accent)'}">PKR ${Format.number(i.due_amount || 0)}</td>
+      <td>${Format.badge(i.payment_status)}</td>
+      <td style="font-size:.82rem;color:var(--text-muted)">${Format.date(i.created_at)}</td>
+    </tr>`).join('');
+}
+
+async function loadRevenueInvoices() {
+  try {
+    const inv = await API.get('/billing/invoices');
+    if (inv?.invoices) renderRevenueInvoices(inv.invoices);
+  } catch(e) {}
+}
+
+// ─── SYSTEM ANALYTICS ────────────────────────
+async function loadAnalyticsData() {
+  const stats = await API.get('/admin/dashboard/stats');
+  const s = stats?.success ? stats : {total_hospitals:0,total_users:0,total_patients:0,today_appointments:0};
+  document.getElementById('anHospitals').textContent = Format.number(s.total_hospitals);
+  document.getElementById('anUsers').textContent = Format.number(s.total_users);
+  document.getElementById('anPatients').textContent = Format.number(s.total_patients);
+  document.getElementById('anAppts').textContent = Format.number(s.today_appointments);
+  document.getElementById('anGrowthHospitals').textContent = Format.number(s.total_hospitals);
+  document.getElementById('anGrowthUsers').textContent = Format.number(s.total_users);
+  document.getElementById('anGrowthPatients').textContent = Format.number(s.total_patients);
+  if (userRoleChart) userRoleChart.destroy();
+  if (hospitalPlanChart) hospitalPlanChart.destroy();
+  let hospitals = [], users = [];
+  try {
+    const hData = await API.get('/admin/hospitals');
+    hospitals = hData?.hospitals || [];
+  } catch(e) {}
+  try {
+    const uData = await API.get('/admin/users');
+    users = uData?.users || [];
+  } catch(e) {}
+  const roleCounts = {};
+  users.forEach(u => { const r = u.role || 'unknown'; roleCounts[r] = (roleCounts[r]||0) + 1; });
+  userRoleChart = new Chart(document.getElementById('userRoleChart'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(roleCounts).map(r => r.replace('_',' ')),
+      datasets: [{ label: 'Users', data: Object.values(roleCounts), backgroundColor: ['#0ea5e9','#6366f1','#10b981','#f59e0b','#ef4444','#ec4899','#8b5cf6','#14b8a6','#f97316'], borderRadius: 6 }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+  });
+  const planCounts = { basic: 0, standard: 0, premium: 0 };
+  hospitals.forEach(h => { if (planCounts[h.subscription_plan] !== undefined) planCounts[h.subscription_plan]++; });
+  hospitalPlanChart = new Chart(document.getElementById('hospitalPlanChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Basic', 'Standard', 'Premium'],
+      datasets: [{ data: [planCounts.basic, planCounts.standard, planCounts.premium], backgroundColor: ['#94a3b8','#0ea5e9','#f59e0b'], borderWidth: 0 }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'right' } }, cutout: '65%' }
+  });
+}
+
+// ─── AUDIT LOGS ──────────────────────────────
+async function loadAuditLogs() {
+  const search = document.getElementById('auditSearch').value.trim();
+  const moduleFilter = document.getElementById('auditModuleFilter').value;
+  let url = `/admin/audit-logs?page=${auditPage}`;
+  try {
+    const data = await API.get(url);
+    const logs = data?.logs || [];
+    const total = data?.total || 0;
+    const tbody = document.getElementById('auditLogsBody');
+    const totalPages = Math.max(1, Math.ceil(total / 50));
+    document.getElementById('auditPaginationInfo').textContent = `Page ${auditPage} of ${totalPages} (${total} total)`;
+    document.getElementById('auditPrevBtn').disabled = auditPage <= 1;
+    document.getElementById('auditNextBtn').disabled = auditPage >= totalPages;
+    if (!logs.length) { setTableEmpty('auditLogsBody', 'No audit logs found', 6); return; }
+    let filtered = logs;
+    if (search) filtered = filtered.filter(l =>
+      (l.action||'').toLowerCase().includes(search.toLowerCase()) ||
+      String(l.user_id||'').includes(search)
+    );
+    if (moduleFilter) filtered = filtered.filter(l => l.module === moduleFilter);
+    tbody.innerHTML = filtered.map(l => {
+      const actionColor = ({LOGIN:'success',LOGOUT:'gray',CREATE:'primary',UPDATE:'info',DELETE:'danger'})[l.action] || 'secondary';
+      return `<tr>
+        <td>${l.id}</td>
+        <td><code style="font-size:.82rem">User #${l.user_id}</code></td>
+        <td><span class="badge badge-${actionColor}">${l.action}</span></td>
+        <td><span class="badge badge-gray">${l.module}</span></td>
+        <td style="font-size:.82rem;font-family:monospace">${l.ip_address || '—'}</td>
+        <td style="font-size:.82rem;color:var(--text-muted)">${Format.datetime(l.created_at)}</td>
+      </tr>`;}).join('');
+  } catch(e) {
+    setTableEmpty('auditLogsBody', 'Failed to load audit logs', 6);
+  }
+}
+
+function changeAuditPage(delta) {
+  auditPage = Math.max(1, auditPage + delta);
+  loadAuditLogs();
+}
+
+const currYear = new Date().getFullYear();
+const yearSelect = document.getElementById('revYearSelect');
+if (yearSelect) {
+  for (let y = currYear; y >= currYear - 4; y--) {
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    if (y === currYear) opt.selected = true;
+    yearSelect.appendChild(opt);
+  }
+}
+
+const user = Auth.require();
+if (user && user.role !== 'super_admin') window.location.href = '../../login.html';
+loadDashboard();
+</script>
+</body>
+</html>

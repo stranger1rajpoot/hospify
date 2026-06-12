@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Hospify</title>
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .ha-section { display:none; }
+    .ha-section.active { display:block; }
+    .role-badge { display:inline-block; padding:3px 9px; border-radius:6px; font-size:.72rem; font-weight:600; text-transform:uppercase; }
+    .role-badge.doctor { background:#dbeafe; color:#1e40af; }
+    .role-badge.nurse { background:#fce7f3; color:#9d174d; }
+    .role-badge.receptionist { background:#dcfce7; color:#166534; }
+    .role-badge.pharmacist { background:#d1fae5; color:#065f46; }
+    .role-badge.lab_technician { background:#e0e7ff; color:#3730a3; }
+    .role-badge.accountant { background:#fef3c7; color:#92400e; }
+    .role-badge.hospital_admin { background:#ede9fe; color:#5b21b6; }
+    .role-badge.super_admin { background:#fee2e2; color:#991b1b; }
+    .audit-action { display:inline-block; padding:2px 8px; border-radius:6px; font-size:.7rem; font-weight:700; text-transform:uppercase; }
+    .audit-action.create { background:#dcfce7; color:#166534; }
+    .audit-action.update { background:#dbeafe; color:#1e40af; }
+    .audit-action.delete { background:#fee2e2; color:#991b1b; }
+    .audit-action.login { background:#ede9fe; color:#5b21b6; }
+    .audit-action.other { background:#e5e7eb; color:#374151; }
+  </style>
+</head>
+<body>
+<div class="dashboard-layout">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon"><i class="fas fa-hospital-symbol"></i></div>
+    <span class="brand-text">Hospify<span style="color:var(--primary-light)">.</span></span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">Main</div>
+    <a class="nav-item active" href="javascript:void(0)" onclick="showSection('dashboard', this); return false;"><i class="fas fa-gauge-high"></i><span class="nav-label">Dashboard</span></a>
+    <a class="nav-item" href="../patient/index.html"><i class="fas fa-bed-pulse"></i><span class="nav-label">Patients</span></a>
+    <a class="nav-item" href="../doctor/index.html"><i class="fas fa-user-doctor"></i><span class="nav-label">Doctors</span></a>
+    <a class="nav-item" href="../reception/index.html"><i class="fas fa-calendar-check"></i><span class="nav-label">Appointments</span></a>
+    <div class="nav-section-title">Modules</div>
+    <a class="nav-item" href="../pharmacy/index.html"><i class="fas fa-pills"></i><span class="nav-label">Pharmacy</span></a>
+    <a class="nav-item" href="../lab/index.html"><i class="fas fa-flask"></i><span class="nav-label">Laboratory</span></a>
+    <a class="nav-item" href="../accounts/index.html"><i class="fas fa-file-invoice-dollar"></i><span class="nav-label">Billing</span></a>
+    <div class="nav-section-title">Admin</div>
+    <a class="nav-item" href="javascript:void(0)" onclick="showSection('staff', this); return false;"><i class="fas fa-users-cog"></i><span class="nav-label">Staff Management</span></a>
+    <a class="nav-item" href="javascript:void(0)" onclick="showSection('departments', this); return false;"><i class="fas fa-building"></i><span class="nav-label">Departments</span></a>
+    <a class="nav-item" href="javascript:void(0)" onclick="showSection('audit', this); return false;"><i class="fas fa-shield-halved"></i><span class="nav-label">Audit Logs</span></a>
+    <a class="nav-item" href="javascript:void(0)" onclick="showSection('settings', this); return false;"><i class="fas fa-gear"></i><span class="nav-label">Settings</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar"><span class="user-initials">HA</span></div>
+      <div class="user-info">
+        <div class="user-name" id="userFullName">Hospital Admin</div>
+        <div class="user-role" id="userRole">Hospital Admin</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<header class="header" id="header">
+  <button class="header-toggle" onclick="Sidebar.toggle()"><i class="fas fa-bars"></i></button>
+  <div class="header-search"><i class="fas fa-search"></i><input type="text" placeholder="Search patients, doctors..."></div>
+  <div class="header-actions">
+    <button class="header-btn" id="themeToggle" onclick="Theme.toggle()"><i class="fas fa-moon"></i></button>
+    <button class="header-btn" style="position:relative"><i class="fas fa-bell"></i><div class="badge"></div></button>
+    <div class="header-profile">
+      <div class="user-avatar avatar-sm"><span class="user-initials">HA</span></div>
+      <div><div class="profile-name" id="headerName">Admin</div><div class="profile-role" id="headerRole">Hospital Admin</div></div>
+    </div>
+    <button class="header-btn" onclick="Auth.logout()" data-tooltip="Logout" style="color:var(--danger)"><i class="fas fa-sign-out-alt"></i></button>
+  </div>
+</header>
+
+<main class="main-content" id="mainContent">
+  <!-- ============ DASHBOARD SECTION ============ -->
+  <div class="page-content ha-section active" id="section-dashboard">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb"><a href="#">Home</a><span>/</span>Dashboard</div>
+        <h1 class="page-title">Hospital Admin <span class="text-gradient">Dashboard</span></h1>
+        <div class="page-subtitle" id="hospitalName">Loading hospital info...</div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-outline" onclick="loadDashboard()"><i class="fas fa-rotate-right"></i> Refresh</button>
+        <button class="btn btn-primary" onclick="showSection('staff', document.querySelector('[onclick*=staff]')); openAddStaff()"><i class="fas fa-plus"></i> Add Staff</button>
+      </div>
+    </div>
+
+    <div class="grid grid-4" style="margin-bottom:24px">
+      <div class="stat-card stat-card-animated primary">
+        <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+        <div class="stat-info">
+          <div class="stat-label">Today's Appointments</div>
+          <div class="stat-value" id="statAppts">—</div>
+          <div class="stat-change up"><i class="fas fa-arrow-up"></i> OPD today</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card-animated success">
+        <div class="stat-icon"><i class="fas fa-rupee-sign"></i></div>
+        <div class="stat-info">
+          <div class="stat-label">Today's Revenue</div>
+          <div class="stat-value" id="statRevToday">—</div>
+          <div class="stat-change up"><i class="fas fa-arrow-up"></i> PKR collected</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card-animated warning">
+        <div class="stat-icon"><i class="fas fa-bed-pulse"></i></div>
+        <div class="stat-info">
+          <div class="stat-label">Total Patients</div>
+          <div class="stat-value" id="statPatients">—</div>
+          <div class="stat-change up"><i class="fas fa-arrow-up"></i> Registered</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card-animated danger">
+        <div class="stat-icon"><i class="fas fa-users"></i></div>
+        <div class="stat-info">
+          <div class="stat-label">Staff Members</div>
+          <div class="stat-value" id="statStaff">—</div>
+          <div class="stat-change up"><i class="fas fa-arrow-up"></i> Active users</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-3" style="margin-bottom:24px">
+      <div class="card" style="grid-column:span 2">
+        <div class="card-header">
+          <i class="fas fa-chart-bar" style="color:var(--primary)"></i>
+          <h3 class="card-title">Weekly OPD / IPD Visits</h3>
+        </div>
+        <div class="card-body"><canvas id="visitsChart" height="180"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-chart-pie" style="color:var(--secondary)"></i>
+          <h3 class="card-title">Revenue Breakdown</h3>
+        </div>
+        <div class="card-body"><canvas id="revenueBreakChart" height="180"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-bottom:24px">
+      <div class="card">
+        <div class="card-header" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px">
+            <i class="fas fa-calendar" style="color:var(--primary)"></i>
+            <h3 class="card-title">Today's Appointments</h3>
+          </div>
+          <span id="todayDate" style="font-size:.8rem;color:var(--text-muted)"></span>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Token</th><th>Patient</th><th>Doctor</th><th>Time</th><th>Status</th></tr></thead>
+            <tbody id="apptTable">
+              <tr><td colspan="5" style="text-align:center;padding:32px"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card">
+          <div class="card-header"><i class="fas fa-pills" style="color:var(--warning)"></i><h3 class="card-title">Pharmacy Alerts</h3></div>
+          <div class="card-body">
+            <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+              <span style="font-size:.875rem">Low Stock Items</span>
+              <span class="badge badge-danger" id="lowStock">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+              <span style="font-size:.875rem">Expiring Soon (90 days)</span>
+              <span class="badge badge-warning" id="expiring">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between">
+              <span style="font-size:.875rem">Total Medicines</span>
+              <span class="badge badge-primary" id="totalMeds">—</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><i class="fas fa-flask" style="color:var(--secondary)"></i><h3 class="card-title">Lab Status</h3></div>
+          <div class="card-body">
+            <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+              <span style="font-size:.875rem">Pending Tests</span>
+              <span class="badge badge-warning" id="labPending">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+              <span style="font-size:.875rem">In Progress</span>
+              <span class="badge badge-info" id="labProgress">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between">
+              <span style="font-size:.875rem">Completed Today</span>
+              <span class="badge badge-success" id="labDone">—</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><i class="fas fa-file-invoice-dollar" style="color:var(--accent)"></i><h3 class="card-title">Billing Summary</h3></div>
+          <div class="card-body">
+            <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+              <span style="font-size:.875rem">Pending Invoices</span>
+              <span class="badge badge-warning" id="billPending">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between">
+              <span style="font-size:.875rem">Total Due (PKR)</span>
+              <span class="badge badge-danger" id="billDue">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <i class="fas fa-building" style="color:var(--primary)"></i>
+          <h3 class="card-title">Departments</h3>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="showSection('departments', document.querySelector('[onclick*=departments]'));"><i class="fas fa-arrow-right"></i> View All</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Department</th><th>Code</th><th>Room</th><th>Status</th><th>Doctors</th></tr></thead>
+          <tbody id="deptTableDash">
+            <tr><td colspan="5" style="text-align:center;padding:32px"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ STAFF MANAGEMENT SECTION ============ -->
+  <div class="page-content ha-section" id="section-staff">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb"><a href="#">Admin</a><span>/</span>Staff</div>
+        <h1 class="page-title"><span class="text-gradient">Staff Management</span></h1>
+        <div class="page-subtitle">Manage doctors, nurses, receptionists & other staff</div>
+      </div>
+      <button class="btn btn-primary" onclick="openAddStaff()"><i class="fas fa-plus"></i> Add Staff</button>
+    </div>
+
+    <div class="grid grid-4" style="margin-bottom:24px">
+      <div class="stat-card stat-card-animated primary"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-info"><div class="stat-label">Total Staff</div><div class="stat-value" id="staffStatTotal">—</div></div></div>
+      <div class="stat-card stat-card-animated success"><div class="stat-icon"><i class="fas fa-user-md"></i></div><div class="stat-info"><div class="stat-label">Doctors</div><div class="stat-value" id="staffStatDocs">—</div></div></div>
+      <div class="stat-card stat-card-animated warning"><div class="stat-icon"><i class="fas fa-user-nurse"></i></div><div class="stat-info"><div class="stat-label">Nurses</div><div class="stat-value" id="staffStatNurses">—</div></div></div>
+      <div class="stat-card stat-card-animated danger"><div class="stat-icon"><i class="fas fa-user-slash"></i></div><div class="stat-info"><div class="stat-label">Inactive</div><div class="stat-value" id="staffStatInactive">—</div></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-list" style="color:var(--primary)"></i><h3 class="card-title">All Staff</h3></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="text" class="form-control" id="staffSearch" placeholder="Search staff..." style="width:200px;padding:6px 12px" oninput="renderStaffTable()">
+          <select class="form-control" id="staffRoleFilter" style="width:160px" onchange="renderStaffTable()">
+            <option value="">All Roles</option>
+            <option value="doctor">Doctor</option>
+            <option value="nurse">Nurse</option>
+            <option value="receptionist">Receptionist</option>
+            <option value="pharmacist">Pharmacist</option>
+            <option value="lab_technician">Lab Technician</option>
+            <option value="accountant">Accountant</option>
+          </select>
+          <select class="form-control" id="staffStatusFilter" style="width:130px" onchange="renderStaffTable()">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Email</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="staffTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ DEPARTMENTS SECTION ============ -->
+  <div class="page-content ha-section" id="section-departments">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb"><a href="#">Admin</a><span>/</span>Departments</div>
+        <h1 class="page-title"><span class="text-gradient">Departments</span></h1>
+        <div class="page-subtitle">Manage hospital departments & units</div>
+      </div>
+      <button class="btn btn-primary" onclick="openAddDept()"><i class="fas fa-plus"></i> Add Department</button>
+    </div>
+
+    <div class="grid grid-3" style="margin-bottom:24px">
+      <div class="stat-card stat-card-animated primary"><div class="stat-icon"><i class="fas fa-building"></i></div><div class="stat-info"><div class="stat-label">Total Departments</div><div class="stat-value" id="deptStatTotal">—</div></div></div>
+      <div class="stat-card stat-card-animated success"><div class="stat-icon"><i class="fas fa-check-circle"></i></div><div class="stat-info"><div class="stat-label">Active</div><div class="stat-value" id="deptStatActive">—</div></div></div>
+      <div class="stat-card stat-card-animated warning"><div class="stat-icon"><i class="fas fa-pause-circle"></i></div><div class="stat-info"><div class="stat-label">Inactive</div><div class="stat-value" id="deptStatInactive">—</div></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-list" style="color:var(--primary)"></i><h3 class="card-title">All Departments</h3></div>
+        <input type="text" class="form-control" id="deptSearch" placeholder="Search departments..." style="width:240px;padding:6px 12px" oninput="renderDeptTable()">
+      </div>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Department</th><th>Code</th><th>Room</th><th>Floor</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="deptTablePage"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ AUDIT LOGS SECTION ============ -->
+  <div class="page-content ha-section" id="section-audit">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb"><a href="#">Admin</a><span>/</span>Audit Logs</div>
+        <h1 class="page-title"><span class="text-gradient">Audit Logs</span></h1>
+        <div class="page-subtitle">System activity & security trail</div>
+      </div>
+      <button class="btn btn-outline" onclick="loadAuditLogs()"><i class="fas fa-rotate-right"></i> Refresh</button>
+    </div>
+
+    <div class="grid grid-4" style="margin-bottom:24px">
+      <div class="stat-card stat-card-animated primary"><div class="stat-icon"><i class="fas fa-list"></i></div><div class="stat-info"><div class="stat-label">Total Events</div><div class="stat-value" id="auditStatTotal">—</div></div></div>
+      <div class="stat-card stat-card-animated success"><div class="stat-icon"><i class="fas fa-plus-circle"></i></div><div class="stat-info"><div class="stat-label">Create</div><div class="stat-value" id="auditStatCreate">—</div></div></div>
+      <div class="stat-card stat-card-animated warning"><div class="stat-icon"><i class="fas fa-edit"></i></div><div class="stat-info"><div class="stat-label">Update</div><div class="stat-value" id="auditStatUpdate">—</div></div></div>
+      <div class="stat-card stat-card-animated danger"><div class="stat-icon"><i class="fas fa-trash"></i></div><div class="stat-info"><div class="stat-label">Delete</div><div class="stat-value" id="auditStatDelete">—</div></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-shield-halved" style="color:var(--primary)"></i><h3 class="card-title">Activity Log</h3></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="text" class="form-control" id="auditSearch" placeholder="Search action, module..." style="width:220px;padding:6px 12px" oninput="renderAuditTable()">
+          <select class="form-control" id="auditModuleFilter" style="width:160px" onchange="renderAuditTable()">
+            <option value="">All Modules</option>
+            <option value="user">User</option>
+            <option value="patient">Patient</option>
+            <option value="appointment">Appointment</option>
+            <option value="billing">Billing</option>
+            <option value="pharmacy">Pharmacy</option>
+            <option value="lab">Lab</option>
+            <option value="auth">Auth</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Module</th><th>IP</th><th>Details</th></tr></thead>
+          <tbody id="auditTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SETTINGS SECTION ============ -->
+  <div class="page-content ha-section" id="section-settings">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb"><a href="#">Admin</a><span>/</span>Settings</div>
+        <h1 class="page-title"><span class="text-gradient">Settings</span></h1>
+        <div class="page-subtitle">Hospital info & account preferences</div>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-header"><i class="fas fa-hospital" style="color:var(--primary)"></i><h3 class="card-title">Hospital Information</h3></div>
+        <div class="card-body">
+          <div class="form-group"><label class="form-label">Hospital Name</label><input class="form-control" id="setName"></div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Code</label><input class="form-control" id="setCode" disabled></div>
+            <div class="form-group"><label class="form-label">Type</label><input class="form-control" id="setType"></div>
+          </div>
+          <div class="form-group"><label class="form-label">Address</label><input class="form-control" id="setAddress"></div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">City</label><input class="form-control" id="setCity"></div>
+            <div class="form-group"><label class="form-label">Province</label><input class="form-control" id="setProvince"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Phone</label><input class="form-control" id="setPhone"></div>
+            <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="setEmail"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Subscription Plan</label>
+              <select class="form-control" id="setPlan"><option value="basic">Basic</option><option value="standard">Standard</option><option value="premium">Premium</option></select>
+            </div>
+            <div class="form-group"><label class="form-label">Tax No</label><input class="form-control" id="setTax"></div>
+          </div>
+          <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> Save Hospital Info</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header"><i class="fas fa-user-shield" style="color:var(--primary)"></i><h3 class="card-title">My Account</h3></div>
+          <div class="card-body">
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+              <div class="user-avatar" style="width:60px;height:60px;font-size:1.2rem"><span id="setAvatar">HA</span></div>
+              <div>
+                <div style="font-weight:700;font-size:1.1rem" id="setMyName">—</div>
+                <div style="color:var(--text-muted);font-size:.875rem" id="setMyEmail">—</div>
+                <div style="margin-top:4px"><span class="role-badge hospital_admin">Hospital Admin</span></div>
+              </div>
+            </div>
+            <button class="btn btn-outline" onclick="Modal.open('changePassModal')"><i class="fas fa-key"></i> Change Password</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><i class="fas fa-info-circle" style="color:var(--primary)"></i><h3 class="card-title">System Info</h3></div>
+          <div class="card-body">
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:.875rem"><span style="color:var(--text-muted)">Hospital ID:</span><strong id="setHospId">—</strong></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:.875rem"><span style="color:var(--text-muted)">Status:</span><strong id="setStatus">—</strong></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:.875rem"><span style="color:var(--text-muted)">Your Role:</span><strong id="setMyRole">—</strong></div>
+            <div style="display:flex;justify-content:space-between;font-size:.875rem"><span style="color:var(--text-muted)">App Version:</span><strong>Hospify 1.0.0</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+
+<!-- ADD/EDIT STAFF MODAL -->
+<div class="modal-overlay" id="addStaffModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-user-plus"></i> <span id="staffModalTitle">Add Staff Member</span></h3>
+      <button class="modal-close" onclick="Modal.close('addStaffModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="sEditId">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">First Name *</label><input class="form-control" id="sfName" placeholder="Muhammad"></div>
+        <div class="form-group"><label class="form-label">Last Name *</label><input class="form-control" id="slName" placeholder="Khan"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Username *</label><input class="form-control" id="sUser" placeholder="dr_khan"></div>
+        <div class="form-group"><label class="form-label">Email *</label><input type="email" class="form-control" id="sEmail" placeholder="dr@hospital.pk"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Role *</label>
+          <select class="form-control" id="sRole">
+            <option value="doctor">Doctor</option>
+            <option value="nurse">Nurse</option>
+            <option value="receptionist">Receptionist</option>
+            <option value="pharmacist">Pharmacist</option>
+            <option value="lab_technician">Lab Technician</option>
+            <option value="accountant">Accountant</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Phone</label><input class="form-control" id="sPhone" placeholder="+92-300-..."></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Password *</label><input type="password" class="form-control" id="sPass" placeholder="Min 8 chars"><div style="font-size:.72rem;color:var(--text-muted);margin-top:4px" id="sPassHint">Required for new staff</div></div>
+        <div class="form-group"><label class="form-label">Gender</label>
+          <select class="form-control" id="sGender"><option value="male">Male</option><option value="female">Female</option></select>
+        </div>
+      </div>
+      <div id="doctorFields">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Specialization</label><input class="form-control" id="sSpec" placeholder="Cardiology"></div>
+          <div class="form-group"><label class="form-label">PMDC No</label><input class="form-control" id="sPmdc" placeholder="PMDC-12345"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Qualification</label><input class="form-control" id="sQual" placeholder="MBBS, FCPS"></div>
+          <div class="form-group"><label class="form-label">Consultation Fee (PKR)</label><input type="number" class="form-control" id="sFee" placeholder="1500"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('addStaffModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitStaff()"><i class="fas fa-save"></i> <span id="staffSubmitText">Add Staff</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT DEPARTMENT MODAL -->
+<div class="modal-overlay" id="addDeptModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-building"></i> <span id="deptModalTitle">Add Department</span></h3>
+      <button class="modal-close" onclick="Modal.close('addDeptModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="dEditId">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Name *</label><input class="form-control" id="dName" placeholder="Cardiology"></div>
+        <div class="form-group"><label class="form-label">Code</label><input class="form-control" id="dCode" placeholder="CARD"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Room No</label><input class="form-control" id="dRoom" placeholder="101A"></div>
+        <div class="form-group"><label class="form-label">Floor</label><input class="form-control" id="dFloor" placeholder="Ground Floor"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Status</label>
+        <select class="form-control" id="dStatus"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" id="dDesc" rows="2" placeholder="Department description..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('addDeptModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitDept()"><i class="fas fa-save"></i> <span id="deptSubmitText">Create</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-overlay" id="changePassModal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-key"></i> Change Password</h3>
+      <button class="modal-close" onclick="Modal.close('changePassModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Current Password *</label><input type="password" class="form-control" id="cpOld"></div>
+      <div class="form-group"><label class="form-label">New Password *</label><input type="password" class="form-control" id="cpNew" placeholder="Min 8 chars"></div>
+      <div class="form-group"><label class="form-label">Confirm New Password *</label><input type="password" class="form-control" id="cpConfirm"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('changePassModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="changePassword()"><i class="fas fa-save"></i> Update Password</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../js/dashboard.js"></script>
+<script>
+let allStaff = [];
+let allDepts = [];
+let allRoles = [];
+let allAudit = [];
+let hospitalId = null;
+let currentSection = 'dashboard';
+let visitsChartInst = null;
+let revenueBreakInst = null;
+
+const myUser = Auth.getUser() || {};
+
+function showSection(name, navEl) {
+  document.querySelectorAll('.ha-section').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById('section-' + name);
+  if (target) target.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    const h = n.getAttribute('href') || '';
+    if (h === '#' || h === 'javascript:void(0)') n.classList.remove('active');
+  });
+  if (navEl) navEl.classList.add('active');
+  currentSection = name;
+  if (name === 'staff') loadStaff();
+  else if (name === 'departments') loadDepartmentsPage();
+  else if (name === 'audit') loadAuditLogs();
+  else if (name === 'settings') loadSettings();
+}
+
+document.getElementById('sRole').addEventListener('change', function() {
+  document.getElementById('doctorFields').style.display = this.value === 'doctor' ? 'block' : 'none';
+});
+
+document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-PK',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+async function loadDashboard() {
+  try {
+    const stats = await API.get('/admin/dashboard/stats');
+    const s = stats?.success ? stats : {today_appointments:0,today_revenue:0,total_patients:0,total_users:0};
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    set('statAppts', s.today_appointments || 0);
+    set('statRevToday', 'PKR ' + Format.number(Math.floor(s.today_revenue || 0)));
+    set('statPatients', s.total_patients || 0);
+    set('statStaff', s.total_users || 0);
+    if (s.hospital_name) {
+      const hn = document.getElementById('hospitalName');
+      if (hn) hn.textContent = s.hospital_name;
+    }
+  } catch(e) { console.error('stats', e); }
+
+  try {
+    const pharma = await API.get('/pharmacy/stats');
+    const p = pharma?.success ? pharma : {low_stock:0,total_medicines:0};
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    set('lowStock', p.low_stock || 0);
+    set('expiring', p.expired || p.expiring || 0);
+    set('totalMeds', p.total_medicines || 0);
+  } catch(e) { console.error('pharma', e); }
+
+  try {
+    const labStats = await API.get('/lab/stats');
+    const l = labStats?.success ? labStats : {requested:0,in_progress:0,completed:0};
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    set('labPending', l.requested || 0);
+    set('labProgress', l.in_progress || 0);
+    set('labDone', l.completed || 0);
+  } catch(e) { console.error('lab', e); }
+
+  try {
+    const billStats = await API.get('/billing/stats');
+    const b = billStats?.success ? billStats : {pending:0,total_pending_amount:0};
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    set('billPending', b.pending || 0);
+    set('billDue', Format.number(Math.floor(b.total_pending_amount || 0)));
+  } catch(e) { console.error('bill', e); }
+
+  loadAppointments();
+  loadDepartments();
+  renderCharts();
+}
+
+async function loadAppointments() {
+  try {
+    const data = await API.get('/appointments/today');
+    const appts = data?.appointments || [];
+    const tbody = document.getElementById('apptTable');
+    if (!tbody) return;
+    if (!appts.length) { setTableEmpty('apptTable','No appointments today',5); return; }
+    tbody.innerHTML = appts.map(a => `<tr>
+      <td><span class="badge badge-primary">#${a.token_no}</span></td>
+      <td style="font-weight:600">${a.patient_name || a.patient?.name || '—'}</td>
+      <td style="font-size:.82rem">${a.doctor_name || 'Dr. Ahmed'}</td>
+      <td style="font-size:.82rem">${Format.time(a.appointment_time)}</td>
+      <td>${Format.badge(a.status)}</td>
+    </tr>`).join('');
+  } catch(e) { console.error('appts', e); }
+}
+
+async function loadDepartments() {
+  try {
+    const data = await API.get('/admin/departments');
+    const depts = data?.departments || [];
+    allDepts = depts;
+    const tbody = document.getElementById('deptTableDash');
+    if (!tbody) return;
+    if (!depts.length) { setTableEmpty('deptTableDash','No departments yet',5); return; }
+    tbody.innerHTML = depts.slice(0,8).map(d => `<tr>
+      <td style="font-weight:600"><i class="fas fa-building" style="color:var(--primary);margin-right:8px"></i>${d.name}</td>
+      <td><code style="background:var(--light-2);padding:3px 8px;border-radius:6px;font-size:.78rem">${d.code||'—'}</code></td>
+      <td>${d.room_no||'—'}</td>
+      <td>${Format.badge(d.status)}</td>
+      <td><span class="badge badge-info">—</span></td>
+    </tr>`).join('');
+  } catch(e) { console.error('depts', e); }
+}
+
+function renderCharts() {
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  if (visitsChartInst) visitsChartInst.destroy();
+  if (revenueBreakInst) revenueBreakInst.destroy();
+  const v = document.getElementById('visitsChart');
+  const r = document.getElementById('revenueBreakChart');
+  if (v) {
+    visitsChartInst = new Chart(v, {
+      type:'bar',
+      data:{labels:days,datasets:[
+        {label:'OPD',data:[42,58,65,48,72,55,38],backgroundColor:'rgba(14,165,233,.8)',borderRadius:6},
+        {label:'IPD',data:[8,12,10,15,9,11,7],backgroundColor:'rgba(99,102,241,.8)',borderRadius:6}
+      ]},
+      options:{responsive:true,plugins:{legend:{position:'top'}},scales:{x:{stacked:false},y:{beginAtZero:true}}}
+    });
+  }
+  if (r) {
+    revenueBreakInst = new Chart(r, {
+      type:'doughnut',
+      data:{labels:['Consultation','Pharmacy','Lab','Other'],datasets:[{data:[45,25,20,10],backgroundColor:['#0ea5e9','#10b981','#6366f1','#f59e0b'],borderWidth:0}]},
+      options:{responsive:true,plugins:{legend:{position:'bottom'}},cutout:'60%'}
+    });
+  }
+}
+
+async function loadStaff() {
+  try {
+    const data = await API.get('/admin/users');
+    allStaff = data?.users || [];
+    renderStaffTable();
+  } catch(e) { console.error('staff', e); Toast.error('Failed to load staff'); }
+}
+
+function renderStaffTable() {
+  const tbody = document.getElementById('staffTable');
+  if (!tbody) return;
+  const q = (document.getElementById('staffSearch')?.value || '').toLowerCase().trim();
+  const role = document.getElementById('staffRoleFilter')?.value || '';
+  const status = document.getElementById('staffStatusFilter')?.value || '';
+  let list = allStaff.slice();
+  if (q) list = list.filter(u => ((u.first_name||'')+' '+(u.last_name||'')).toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q) || (u.username||'').toLowerCase().includes(q));
+  if (role) list = list.filter(u => u.role_name === role || u.role === role);
+  if (status === 'active') list = list.filter(u => u.is_active);
+  else if (status === 'inactive') list = list.filter(u => !u.is_active);
+
+  const total = allStaff.length;
+  const docs = allStaff.filter(u => (u.role_name||u.role) === 'doctor').length;
+  const nurses = allStaff.filter(u => (u.role_name||u.role) === 'nurse').length;
+  const inactive = allStaff.filter(u => !u.is_active).length;
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  set('staffStatTotal', total);
+  set('staffStatDocs', docs);
+  set('staffStatNurses', nurses);
+  set('staffStatInactive', inactive);
+
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted)">No staff match your filters</td></tr>'; return; }
+  tbody.innerHTML = list.map(u => {
+    const roleName = u.role_name || u.role || 'unknown';
+    const initials = ((u.first_name||'')[0] + (u.last_name||'')[0]).toUpperCase() || '?';
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:10px">
+        <div class="avatar avatar-sm avatar-primary">${initials}</div>
+        <div><div style="font-weight:600">${u.first_name||''} ${u.last_name||''}</div><div style="font-size:.75rem;color:var(--text-muted)">${u.specialization||''}</div></div>
+      </div></td>
+      <td><code style="font-size:.8rem">@${u.username||'—'}</code></td>
+      <td><span class="role-badge ${roleName}">${roleName.replace('_',' ')}</span></td>
+      <td style="font-size:.85rem">${u.email||'—'}</td>
+      <td style="font-size:.85rem">${u.phone||'—'}</td>
+      <td>${u.is_active ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-danger">Inactive</span>'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline btn-sm" onclick="openEditStaff(${u.id})" title="Edit"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-outline btn-sm" onclick="toggleStaffActive(${u.id}, ${!u.is_active})" title="${u.is_active?'Deactivate':'Activate'}" style="color:${u.is_active?'var(--warning)':'var(--accent)'};border-color:${u.is_active?'var(--warning)':'var(--accent)'}"><i class="fas fa-${u.is_active?'ban':'check'}"></i></button>
+        <button class="btn btn-outline btn-sm" onclick="deleteStaff(${u.id})" title="Delete" style="color:var(--danger);border-color:var(--danger)"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openAddStaff() {
+  document.getElementById('sEditId').value = '';
+  document.getElementById('staffModalTitle').textContent = 'Add Staff Member';
+  document.getElementById('staffSubmitText').textContent = 'Add Staff';
+  document.getElementById('sPassHint').textContent = 'Required for new staff';
+  document.getElementById('sPass').placeholder = 'Min 8 chars';
+  ['sfName','slName','sUser','sEmail','sPhone','sPass','sSpec','sPmdc','sQual','sFee'].forEach(id => {
+    const e = document.getElementById(id);
+    if (e) e.value = id === 'sFee' ? '0' : '';
+  });
+  document.getElementById('sRole').value = 'doctor';
+  document.getElementById('sGender').value = 'male';
+  document.getElementById('doctorFields').style.display = 'block';
+  Modal.open('addStaffModal');
+}
+
+async function openEditStaff(id) {
+  const u = allStaff.find(x => x.id === id);
+  if (!u) { Toast.error('Staff not found'); return; }
+  try {
+    const detail = await API.get(`/admin/users/${id}`);
+    const full = detail?.user || u;
+    document.getElementById('sEditId').value = id;
+    document.getElementById('staffModalTitle').textContent = 'Edit Staff';
+    document.getElementById('staffSubmitText').textContent = 'Save Changes';
+    document.getElementById('sPassHint').textContent = 'Leave blank to keep current password';
+    document.getElementById('sPass').placeholder = 'Leave blank to keep';
+    document.getElementById('sfName').value = full.first_name || '';
+    document.getElementById('slName').value = full.last_name || '';
+    document.getElementById('sUser').value = full.username || '';
+    document.getElementById('sEmail').value = full.email || '';
+    document.getElementById('sPhone').value = full.phone || '';
+    document.getElementById('sRole').value = full.role_name || full.role || 'doctor';
+    document.getElementById('sGender').value = full.gender || 'male';
+    document.getElementById('sSpec').value = full.specialization || '';
+    document.getElementById('sPmdc').value = full.pmdc_no || '';
+    document.getElementById('sQual').value = full.qualification || '';
+    document.getElementById('sFee').value = full.consultation_fee || 0;
+    document.getElementById('doctorFields').style.display = (full.role_name || full.role) === 'doctor' ? 'block' : 'none';
+    document.getElementById('sPass').value = '';
+    Modal.open('addStaffModal');
+  } catch(e) {
+    Toast.error('Failed to load staff details');
+  }
+}
+
+async function submitStaff() {
+  const editId = document.getElementById('sEditId').value;
+  const payload = {
+    first_name: document.getElementById('sfName').value.trim(),
+    last_name: document.getElementById('slName').value.trim(),
+    username: document.getElementById('sUser').value.trim(),
+    email: document.getElementById('sEmail').value.trim(),
+    password: document.getElementById('sPass').value,
+    role: document.getElementById('sRole').value,
+    phone: document.getElementById('sPhone').value.trim(),
+    gender: document.getElementById('sGender').value,
+    specialization: document.getElementById('sSpec').value.trim(),
+    pmdc_no: document.getElementById('sPmdc').value.trim(),
+    qualification: document.getElementById('sQual').value.trim(),
+    consultation_fee: document.getElementById('sFee').value || 0,
+  };
+  if (!payload.first_name || !payload.username || !payload.email) { Toast.error('Fill required fields'); return; }
+  if (!editId && !payload.password) { Toast.error('Password required for new staff'); return; }
+  if (editId && !payload.password) delete payload.password;
+
+  const data = editId
+    ? await API.put(`/admin/users/${editId}`, payload)
+    : await API.post('/admin/users', payload);
+
+  if (data?.success) {
+    Toast.success(editId ? 'Staff updated!' : 'Staff added!');
+    Modal.close('addStaffModal');
+    loadStaff();
+  } else {
+    Toast.error(data?.message || 'Failed to save staff');
+  }
+}
+
+async function toggleStaffActive(id, activate) {
+  const res = await API.put(`/admin/users/${id}`, { is_active: activate });
+  if (res?.success) {
+    Toast.success(activate ? 'Staff activated' : 'Staff deactivated');
+    loadStaff();
+  } else {
+    Toast.error(res?.message || 'Failed to update');
+  }
+}
+
+async function deleteStaff(id) {
+  const u = allStaff.find(x => x.id === id);
+  if (!confirm(`Delete staff member "${u?.first_name||''} ${u?.last_name||''}"?\n\nThis action cannot be undone.`)) return;
+  const res = await API.delete(`/admin/users/${id}`);
+  if (res?.success) {
+    Toast.success('Staff deleted');
+    loadStaff();
+  } else {
+    Toast.error(res?.message || 'Failed to delete');
+  }
+}
+
+async function loadDepartmentsPage() {
+  try {
+    const data = await API.get('/admin/departments');
+    allDepts = data?.departments || [];
+    renderDeptTable();
+  } catch(e) { console.error('depts', e); Toast.error('Failed to load departments'); }
+}
+
+function renderDeptTable() {
+  const tbody = document.getElementById('deptTablePage');
+  if (!tbody) return;
+  const q = (document.getElementById('deptSearch')?.value || '').toLowerCase().trim();
+  let list = allDepts.slice();
+  if (q) list = list.filter(d => (d.name||'').toLowerCase().includes(q) || (d.code||'').toLowerCase().includes(q));
+
+  const total = allDepts.length;
+  const active = allDepts.filter(d => d.status === 'active').length;
+  const inactive = allDepts.filter(d => d.status !== 'active').length;
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  set('deptStatTotal', total);
+  set('deptStatActive', active);
+  set('deptStatInactive', inactive);
+
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted)">No departments found</td></tr>'; return; }
+  tbody.innerHTML = list.map(d => `<tr>
+    <td style="font-weight:600"><i class="fas fa-building" style="color:var(--primary);margin-right:8px"></i>${d.name}</td>
+    <td><code style="background:var(--light-2);padding:3px 8px;border-radius:6px;font-size:.78rem">${d.code||'—'}</code></td>
+    <td>${d.room_no||'—'}</td>
+    <td>${d.floor||'—'}</td>
+    <td>${Format.badge(d.status)}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" onclick="openEditDept(${d.id})" title="Edit"><i class="fas fa-edit"></i></button>
+      <button class="btn btn-outline btn-sm" onclick="deleteDept(${d.id})" title="Delete" style="color:var(--danger);border-color:var(--danger)"><i class="fas fa-trash"></i></button>
+    </td>
+  </tr>`).join('');
+}
+
+function openAddDept() {
+  document.getElementById('dEditId').value = '';
+  document.getElementById('deptModalTitle').textContent = 'Add Department';
+  document.getElementById('deptSubmitText').textContent = 'Create';
+  ['dName','dCode','dRoom','dFloor','dDesc'].forEach(id => {
+    const e = document.getElementById(id);
+    if (e) e.value = '';
+  });
+  document.getElementById('dStatus').value = 'active';
+  Modal.open('addDeptModal');
+}
+
+function openEditDept(id) {
+  const d = allDepts.find(x => x.id === id);
+  if (!d) { Toast.error('Department not found'); return; }
+  document.getElementById('dEditId').value = id;
+  document.getElementById('deptModalTitle').textContent = 'Edit Department';
+  document.getElementById('deptSubmitText').textContent = 'Save Changes';
+  document.getElementById('dName').value = d.name || '';
+  document.getElementById('dCode').value = d.code || '';
+  document.getElementById('dRoom').value = d.room_no || '';
+  document.getElementById('dFloor').value = d.floor || '';
+  document.getElementById('dStatus').value = d.status || 'active';
+  document.getElementById('dDesc').value = d.description || '';
+  Modal.open('addDeptModal');
+}
+
+async function submitDept() {
+  const editId = document.getElementById('dEditId').value;
+  const payload = {
+    name: document.getElementById('dName').value.trim(),
+    code: document.getElementById('dCode').value.trim(),
+    room_no: document.getElementById('dRoom').value.trim(),
+    floor: document.getElementById('dFloor').value.trim(),
+    status: document.getElementById('dStatus').value,
+    description: document.getElementById('dDesc').value.trim(),
+  };
+  if (!payload.name) { Toast.error('Department name required'); return; }
+  const data = editId
+    ? await API.put(`/admin/departments/${editId}`, payload)
+    : await API.post('/admin/departments', payload);
+  if (data?.success) {
+    Toast.success(editId ? 'Department updated!' : 'Department created!');
+    Modal.close('addDeptModal');
+    loadDepartmentsPage();
+    if (currentSection === 'dashboard') loadDepartments();
+  } else {
+    Toast.error(data?.message || 'Failed to save department');
+  }
+}
+
+async function deleteDept(id) {
+  const d = allDepts.find(x => x.id === id);
+  if (!confirm(`Delete department "${d?.name}"?\n\nThis action cannot be undone.`)) return;
+  const res = await API.delete(`/admin/departments/${id}`);
+  if (res?.success) {
+    Toast.success('Department deleted');
+    loadDepartmentsPage();
+  } else {
+    Toast.error(res?.message || 'Failed to delete');
+  }
+}
+
+async function loadAuditLogs() {
+  try {
+    const data = await API.get('/admin/audit-logs?per_page=200');
+    allAudit = data?.logs || [];
+    renderAuditTable();
+  } catch(e) { console.error('audit', e); Toast.error('Failed to load audit logs'); }
+}
+
+function renderAuditTable() {
+  const tbody = document.getElementById('auditTable');
+  if (!tbody) return;
+  const q = (document.getElementById('auditSearch')?.value || '').toLowerCase().trim();
+  const mod = document.getElementById('auditModuleFilter')?.value || '';
+  let list = allAudit.slice();
+  if (q) list = list.filter(l => (l.action||'').toLowerCase().includes(q) || (l.module||'').toLowerCase().includes(q));
+  if (mod) list = list.filter(l => (l.module||'') === mod);
+
+  const total = allAudit.length;
+  const create = allAudit.filter(l => (l.action||'').toLowerCase().includes('create')).length;
+  const update = allAudit.filter(l => (l.action||'').toLowerCase().includes('update')).length;
+  const del = allAudit.filter(l => (l.action||'').toLowerCase().includes('delete')).length;
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  set('auditStatTotal', total);
+  set('auditStatCreate', create);
+  set('auditStatUpdate', update);
+  set('auditStatDelete', del);
+
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted)">No audit events recorded</td></tr>'; return; }
+  tbody.innerHTML = list.slice(0, 200).map(l => {
+    const action = (l.action||'').toLowerCase();
+    const actClass = action.includes('create') ? 'create' : action.includes('update') ? 'update' : action.includes('delete') ? 'delete' : action.includes('login') ? 'login' : 'other';
+    return `<tr>
+      <td style="font-size:.78rem;white-space:nowrap">${Format.datetime(l.created_at)}</td>
+      <td style="font-size:.85rem">User #${l.user_id||'—'}</td>
+      <td><span class="audit-action ${actClass}">${l.action||'—'}</span></td>
+      <td>${l.module||'—'}</td>
+      <td style="font-size:.78rem;font-family:monospace">${l.ip_address||'—'}</td>
+      <td style="font-size:.78rem;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.record_id ? 'Record #'+l.record_id : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadSettings() {
+  if (!hospitalId) {
+    const me = myUser;
+    hospitalId = me.hospital_id;
+  }
+  const me = myUser;
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  const setV = (id, v) => { const e = document.getElementById(id); if (e) e.value = v; };
+  set('setMyName', `${me.first_name||''} ${me.last_name||''}`.trim() || 'Admin');
+  set('setMyEmail', me.email || '—');
+  set('setMyRole', (me.role||'hospital_admin').replace('_',' '));
+  set('setHospId', hospitalId || '—');
+  set('setAvatar', ((me.first_name||'H')[0] + (me.last_name||'A')[0]).toUpperCase());
+
+  if (!hospitalId) return;
+  try {
+    const data = await API.get(`/admin/hospitals/${hospitalId}`);
+    const h = data?.hospital;
+    if (h) {
+      setV('setName', h.name || '');
+      setV('setCode', h.code || '');
+      setV('setType', h.type || '');
+      setV('setAddress', h.address || '');
+      setV('setCity', h.city || '');
+      setV('setProvince', h.province || '');
+      setV('setPhone', h.phone || '');
+      setV('setEmail', h.email || '');
+      setV('setPlan', h.subscription_plan || 'basic');
+      setV('setTax', h.tax_no || '');
+      set('setStatus', h.status || '—');
+      set('hospitalName', h.name || '');
+    }
+  } catch(e) { console.error('settings', e); }
+}
+
+async function saveSettings() {
+  if (!hospitalId) { Toast.error('No hospital loaded'); return; }
+  const payload = {
+    name: document.getElementById('setName').value.trim(),
+    address: document.getElementById('setAddress').value.trim(),
+    city: document.getElementById('setCity').value.trim(),
+    province: document.getElementById('setProvince').value.trim(),
+    phone: document.getElementById('setPhone').value.trim(),
+    email: document.getElementById('setEmail').value.trim(),
+    subscription_plan: document.getElementById('setPlan').value,
+    tax_no: document.getElementById('setTax').value.trim(),
+  };
+  const res = await API.put(`/admin/hospitals/${hospitalId}`, payload);
+  if (res?.success) {
+    Toast.success('Hospital info saved');
+    loadSettings();
+  } else {
+    Toast.error(res?.message || 'Failed to save');
+  }
+}
+
+function changePassword() {
+  const oldP = document.getElementById('cpOld').value;
+  const newP = document.getElementById('cpNew').value;
+  const conf = document.getElementById('cpConfirm').value;
+  if (!oldP || !newP || !conf) { Toast.error('Fill all fields'); return; }
+  if (newP.length < 8) { Toast.error('New password must be at least 8 characters'); return; }
+  if (newP !== conf) { Toast.error('Passwords do not match'); return; }
+  Toast.info('Password change endpoint not yet implemented in backend');
+  Modal.close('changePassModal');
+}
+
+Auth.require();
+loadDashboard();
+</script>
+</body>
+</html>

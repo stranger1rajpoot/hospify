@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Hospify</title>
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="dashboard-layout">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon"><i class="fas fa-hospital-symbol"></i></div>
+    <span class="brand-text">Hospify<span style="color:var(--primary-light)">.</span></span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">Pharmacy</div>
+    <a class="nav-item active" id="nav-dashboard" onclick="showSection('dashboard')"><i class="fas fa-gauge-high"></i><span class="nav-label">Dashboard</span></a>
+    <a class="nav-item" id="nav-inventory" onclick="showSection('inventory')"><i class="fas fa-pills"></i><span class="nav-label">Medicine Inventory</span></a>
+    <a class="nav-item" id="nav-sale" onclick="showSection('sale')"><i class="fas fa-cart-shopping"></i><span class="nav-label">New Sale</span></a>
+    <a class="nav-item" id="nav-prescriptions" onclick="showSection('prescriptions')"><i class="fas fa-file-prescription"></i><span class="nav-label">Prescriptions</span></a>
+    <div class="nav-section-title">Alerts</div>
+    <a class="nav-item" id="nav-low-stock" onclick="showSection('low-stock')"><i class="fas fa-triangle-exclamation" style="color:var(--warning)"></i><span class="nav-label">Low Stock</span><span class="nav-badge" id="lowBadge">0</span></a>
+    <a class="nav-item" id="nav-expiring" onclick="showSection('expiring')"><i class="fas fa-calendar-xmark" style="color:var(--danger)"></i><span class="nav-label">Expiring Soon</span></a>
+    <div class="nav-section-title">Reports</div>
+    <a class="nav-item" id="nav-reports" onclick="showSection('reports')"><i class="fas fa-chart-line"></i><span class="nav-label">Sales Reports</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar"><span class="user-initials">PH</span></div>
+      <div class="user-info">
+        <div class="user-name" id="userFullName">Pharmacist</div>
+        <div class="user-role" id="userRole">Pharmacist</div>
+      </div>
+    </div>
+  </div>
+</aside>
+<header class="header" id="header">
+  <button class="header-toggle" onclick="Sidebar.toggle()"><i class="fas fa-bars"></i></button>
+  <div class="header-search"><i class="fas fa-search"></i><input type="text" placeholder="Search medicines..." id="globalSearch" oninput="searchMeds(this.value)"></div>
+  <div class="header-actions">
+    <button class="header-btn" id="themeToggle" onclick="Theme.toggle()"><i class="fas fa-moon"></i></button>
+    <button class="btn btn-primary" onclick="Modal.open('addMedModal')" style="padding:8px 16px;border-radius:10px"><i class="fas fa-plus"></i> Add Medicine</button>
+    <button class="header-btn" onclick="Auth.logout()" data-tooltip="Logout" style="color:var(--danger)"><i class="fas fa-sign-out-alt"></i></button>
+  </div>
+</header>
+
+<main class="main-content" id="mainContent">
+  <div class="page-content">
+
+    <!-- DASHBOARD SECTION -->
+    <div id="section-dashboard" class="page-section">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Pharmacy <span class="text-gradient">Dashboard</span></h1>
+          <div class="page-subtitle">Medicine inventory & sales management</div>
+        </div>
+      </div>
+
+      <div class="grid grid-4" style="margin-bottom:24px">
+        <div class="stat-card stat-card-animated primary"><div class="stat-icon"><i class="fas fa-pills"></i></div>
+          <div class="stat-info"><div class="stat-label">Total Medicines</div><div class="stat-value" id="sTotalMeds">—</div></div></div>
+        <div class="stat-card stat-card-animated success"><div class="stat-icon"><i class="fas fa-boxes-stacked"></i></div>
+          <div class="stat-info"><div class="stat-label">In Stock</div><div class="stat-value" id="sInStock">—</div></div></div>
+        <div class="stat-card stat-card-animated danger"><div class="stat-icon"><i class="fas fa-triangle-exclamation"></i></div>
+          <div class="stat-info"><div class="stat-label">Low Stock Alerts</div><div class="stat-value" id="sLowStock">—</div></div></div>
+        <div class="stat-card stat-card-animated warning"><div class="stat-icon"><i class="fas fa-calendar-xmark"></i></div>
+          <div class="stat-info"><div class="stat-label">Expiring (90d)</div><div class="stat-value" id="sExpiring">—</div></div></div>
+      </div>
+
+      <div class="grid grid-2" style="margin-bottom:24px">
+        <div class="card">
+          <div class="card-header"><i class="fas fa-chart-bar" style="color:var(--primary)"></i><h3 class="card-title">Sales This Week (PKR)</h3></div>
+          <div class="card-body"><canvas id="salesChart" height="200"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><i class="fas fa-chart-pie" style="color:var(--secondary)"></i><h3 class="card-title">Stock by Category</h3></div>
+          <div class="card-body"><canvas id="categoryChart" height="200"></canvas></div>
+        </div>
+      </div>
+    </div> <!-- END DASHBOARD SECTION -->
+
+    <!-- INVENTORY SECTION -->
+    <div id="section-inventory" class="page-section" style="display:none">
+      <div class="page-header">
+        <div><h1 class="page-title">Medicine Inventory</h1><div class="page-subtitle">Manage all medicines</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-pills" style="color:var(--primary)"></i><h3 class="card-title">Medicine Inventory</h3></div>
+          <div style="display:flex;gap:8px">
+            <select class="form-control" style="width:160px" id="statusFilter" onchange="filterMeds()">
+              <option value="">All Status</option>
+              <option value="available">Available</option>
+              <option value="out_of_stock">Out of Stock</option>
+              <option value="expired">Expired</option>
+            </select>
+            <input type="text" class="form-control" style="width:220px" placeholder="Search medicines..." id="medSearch" oninput="filterMeds()">
+            <button class="btn btn-primary btn-sm" onclick="Modal.open('addMedModal')"><i class="fas fa-plus"></i> Add</button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Medicine</th><th>Category</th><th>Unit</th><th>Stock</th><th>Sale Price</th><th>Expiry</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="medTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div> <!-- END INVENTORY SECTION -->
+
+    <!-- NEW SALE (POS) SECTION -->
+    <div id="section-sale" class="page-section" style="display:none">
+      <div class="page-header"><div><h1 class="page-title">Point of Sale</h1><div class="page-subtitle">Walk-in pharmacy sales & billing</div></div></div>
+      <div class="grid" style="grid-template-columns:1.6fr 1fr;gap:20px;align-items:start">
+        <div class="card">
+          <div class="card-header" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-capsules" style="color:var(--primary)"></i><h3 class="card-title">Available Medicines</h3></div>
+            <input type="text" class="form-control" id="posSearch" placeholder="Search by name or category..." style="width:260px;padding:6px 12px" oninput="renderPosMeds()">
+          </div>
+          <div class="card-body" style="max-height:520px;overflow-y:auto;padding:8px">
+            <div id="posMedList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><i class="fas fa-receipt" style="color:var(--accent)"></i><h3 class="card-title">Cart</h3></div>
+          <div class="card-body" style="padding:0">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--light-3)">
+              <label class="form-label" style="font-size:.75rem;margin-bottom:4px">Customer (optional - leave blank for walk-in)</label>
+              <select class="form-control" id="posPatient" style="padding:6px 10px"></select>
+            </div>
+            <div id="posCart" style="max-height:300px;overflow-y:auto;padding:8px"></div>
+            <div style="padding:16px;border-top:1px solid var(--light-3);background:var(--light-2)">
+              <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:6px"><span>Subtotal</span><span id="posSubtotal">PKR 0.00</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:.85rem;margin-bottom:6px">
+                <span>Discount</span>
+                <input type="number" class="form-control" id="posDiscount" value="0" min="0" step="0.01" style="width:120px;padding:4px 8px;text-align:right" oninput="recalcPosTotals()">
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:6px"><span>Tax (5%)</span><span id="posTax">PKR 0.00</span></div>
+              <div style="display:flex;justify-content:space-between;font-weight:700;font-size:1.05rem;padding-top:8px;border-top:1px dashed var(--light-3);margin-top:8px"><span>Total</span><span id="posTotal" style="color:var(--primary)">PKR 0.00</span></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+                <select class="form-control" id="posPayment" style="padding:6px 8px">
+                  <option value="cash">Cash</option>
+                  <option value="card">Card</option>
+                  <option value="easypaisa">EasyPaisa</option>
+                  <option value="jazzcash">JazzCash</option>
+                </select>
+                <button class="btn btn-primary" onclick="submitPosSale()" id="posSubmitBtn"><i class="fas fa-check-circle"></i> Complete Sale</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRESCRIPTIONS SECTION -->
+    <div id="section-prescriptions" class="page-section" style="display:none">
+      <div class="page-header"><div><h1 class="page-title">Prescriptions</h1><div class="page-subtitle">View & dispense doctor prescriptions</div></div></div>
+      <div class="card">
+        <div class="card-header" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-file-prescription" style="color:var(--accent)"></i><h3 class="card-title">All Prescriptions</h3></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="text" class="form-control" id="pharmRxSearch" placeholder="Search patient, Rx no..." style="width:240px;padding:6px 12px" oninput="renderPharmacyPrescriptions()">
+            <select class="form-control" id="pharmRxStatus" style="width:140px" onchange="renderPharmacyPrescriptions()">
+              <option value="">All</option>
+              <option value="pending">Pending</option>
+              <option value="dispensed">Dispensed</option>
+            </select>
+            <button class="btn btn-outline btn-sm" onclick="loadPrescriptions()"><i class="fas fa-rotate"></i> Refresh</button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table><thead><tr><th>Rx No</th><th>Patient</th><th>Doctor</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="rxTableBody"><tr><td colspan="6" style="text-align:center;padding:32px"><div class="spinner"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOW STOCK SECTION -->
+    <div id="section-low-stock" class="page-section" style="display:none">
+      <div class="page-header"><div><h1 class="page-title">Low Stock Alerts</h1><div class="page-subtitle">Medicines below minimum stock level</div></div></div>
+      <div class="card">
+        <div class="card-header"><i class="fas fa-triangle-exclamation" style="color:var(--warning)"></i><h3 class="card-title">Items to Reorder</h3></div>
+        <div class="table-container">
+          <table><thead><tr><th>Medicine</th><th>Category</th><th>Current Stock</th><th>Min Level</th><th>Action</th></tr></thead>
+            <tbody id="lowStockTableBody"><tr><td colspan="5" style="text-align:center;padding:32px"><div class="spinner"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPIRING SECTION -->
+    <div id="section-expiring" class="page-section" style="display:none">
+      <div class="page-header"><div><h1 class="page-title">Expiring Soon</h1><div class="page-subtitle">Medicines expiring within 90 days</div></div></div>
+      <div class="card">
+        <div class="card-header"><i class="fas fa-calendar-xmark" style="color:var(--danger)"></i><h3 class="card-title">Expiring Items</h3></div>
+        <div class="table-container">
+          <table><thead><tr><th>Medicine</th><th>Batch No</th><th>Stock</th><th>Expiry Date</th><th>Action</th></tr></thead>
+            <tbody id="expiringTableBody"><tr><td colspan="5" style="text-align:center;padding:32px"><div class="spinner"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- REPORTS SECTION -->
+    <div id="section-reports" class="page-section" style="display:none">
+      <div class="page-header"><div><h1 class="page-title">Sales Reports</h1><div class="page-subtitle">Pharmacy revenue and sales history</div></div></div>
+      <div class="grid grid-4" style="margin-bottom:20px">
+        <div class="stat-card success"><div class="stat-icon"><i class="fas fa-coins"></i></div><div class="stat-info"><div class="stat-label">Today's Revenue</div><div class="stat-value" id="rToday">PKR 0</div></div></div>
+        <div class="stat-card primary"><div class="stat-icon"><i class="fas fa-calendar-week"></i></div><div class="stat-info"><div class="stat-label">This Week</div><div class="stat-value" id="rWeek">PKR 0</div></div></div>
+        <div class="stat-card warning"><div class="stat-icon"><i class="fas fa-calendar"></i></div><div class="stat-info"><div class="stat-label">This Month</div><div class="stat-value" id="rMonth">PKR 0</div></div></div>
+        <div class="stat-card info"><div class="stat-icon"><i class="fas fa-file-invoice-dollar"></i></div><div class="stat-info"><div class="stat-label">Total Invoices</div><div class="stat-value" id="rInvoices">0</div></div></div>
+      </div>
+
+      <div class="grid grid-2" style="margin-bottom:20px">
+        <div class="card">
+          <div class="card-header"><i class="fas fa-chart-line" style="color:var(--primary)"></i><h3 class="card-title">Sales (Last 7 Days)</h3></div>
+          <div class="card-body"><canvas id="reportSalesChart" height="220"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><i class="fas fa-trophy" style="color:var(--warning)"></i><h3 class="card-title">Top Selling Medicines</h3></div>
+          <div class="card-body" style="padding:0">
+            <div class="table-container" style="max-height:280px;overflow-y:auto">
+              <table><thead><tr><th>#</th><th>Medicine</th><th>Qty</th><th>Revenue</th></tr></thead>
+                <tbody id="topMedsBody"><tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted)">No sales yet</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px"><i class="fas fa-clock-rotate-left" style="color:var(--secondary)"></i><h3 class="card-title">Recent Sales</h3></div>
+          <button class="btn btn-outline btn-sm" onclick="loadReports()"><i class="fas fa-rotate"></i> Refresh</button>
+        </div>
+        <div class="table-container">
+          <table><thead><tr><th>Invoice #</th><th>Patient</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody id="recentSalesBody"><tr><td colspan="7" style="text-align:center;padding:32px"><div class="spinner"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+</div>
+
+<!-- ADD MEDICINE MODAL -->
+<div class="modal-overlay" id="addMedModal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-pills"></i> Add Medicine</h3>
+      <button class="modal-close" onclick="Modal.close('addMedModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Medicine Name *</label><input class="form-control" id="mName" placeholder="Panadol"></div>
+        <div class="form-group"><label class="form-label">Generic Name</label><input class="form-control" id="mGeneric" placeholder="Paracetamol"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Category</label><input class="form-control" id="mCat" placeholder="Analgesic"></div>
+        <div class="form-group"><label class="form-label">Manufacturer</label><input class="form-control" id="mMfr" placeholder="GSK"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Unit *</label>
+          <select class="form-control" id="mUnit"><option>tablet</option><option>capsule</option><option>syrup</option><option>injection</option><option>cream</option><option>drops</option><option>other</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Strength</label><input class="form-control" id="mStrength" placeholder="500mg"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Purchase Price (PKR)</label><input type="number" class="form-control" id="mPurchase" placeholder="10.00"></div>
+        <div class="form-group"><label class="form-label">Sale Price (PKR) *</label><input type="number" class="form-control" id="mSale" placeholder="15.00"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Stock Quantity *</label><input type="number" class="form-control" id="mStock" placeholder="100"></div>
+        <div class="form-group"><label class="form-label">Min Stock Level</label><input type="number" class="form-control" id="mMinStock" value="10"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Expiry Date</label><input type="date" class="form-control" id="mExpiry"></div>
+        <div class="form-group"><label class="form-label">Batch No</label><input class="form-control" id="mBatch" placeholder="BT-2024-001"></div>
+      </div>
+      <div class="form-group"><label class="checkbox-wrapper"><input type="checkbox" id="mRx"><span>Requires Prescription</span></label></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('addMedModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addMedicine()"><i class="fas fa-plus"></i> Add Medicine</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MEDICINE MODAL -->
+<div class="modal-overlay" id="editMedModal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-edit"></i> Edit Medicine</h3>
+      <button class="modal-close" onclick="Modal.close('editMedModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="emId">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Medicine Name *</label><input class="form-control" id="emName"></div>
+        <div class="form-group"><label class="form-label">Generic Name</label><input class="form-control" id="emGeneric"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Category</label><input class="form-control" id="emCat"></div>
+        <div class="form-group"><label class="form-label">Manufacturer</label><input class="form-control" id="emMfr"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Unit</label>
+          <select class="form-control" id="emUnit"><option>tablet</option><option>capsule</option><option>syrup</option><option>injection</option><option>cream</option><option>drops</option><option>other</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Strength</label><input class="form-control" id="emStrength"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Purchase Price (PKR)</label><input type="number" class="form-control" id="emPurchase"></div>
+        <div class="form-group"><label class="form-label">Sale Price (PKR) *</label><input type="number" class="form-control" id="emSale"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Stock Quantity</label><input type="number" class="form-control" id="emStock"></div>
+        <div class="form-group"><label class="form-label">Min Stock Level</label><input type="number" class="form-control" id="emMinStock"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Status</label>
+          <select class="form-control" id="emStatus"><option value="available">Available</option><option value="out_of_stock">Out of Stock</option><option value="discontinued">Discontinued</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Expiry Date</label><input type="date" class="form-control" id="emExpiry"></div>
+      </div>
+      <div class="form-group"><label class="checkbox-wrapper"><input type="checkbox" id="emRx"><span>Requires Prescription</span></label></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('editMedModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveMedEdit()"><i class="fas fa-save"></i> Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESTOCK MEDICINE MODAL -->
+<div class="modal-overlay" id="restockModal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-boxes-stacked"></i> Restock Medicine</h3>
+      <button class="modal-close" onclick="Modal.close('restockModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="rmId">
+      <div style="background:var(--light-2);padding:14px;border-radius:10px;margin-bottom:16px">
+        <div style="font-size:.75rem;color:var(--text-muted)">Medicine</div>
+        <div style="font-weight:700;font-size:1.05rem" id="rmName">—</div>
+        <div style="font-size:.85rem;color:var(--text-muted);margin-top:4px">Current stock: <span id="rmCurrent" style="font-weight:700;color:var(--text)">0</span></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Quantity to Add *</label>
+        <input type="number" class="form-control" id="rmQty" min="1" value="10" placeholder="Enter quantity">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('restockModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitRestock()"><i class="fas fa-plus"></i> Add to Stock</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRESCRIPTION VIEW MODAL (Pharmacy) -->
+<div class="modal-overlay" id="pharmRxViewModal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-file-prescription"></i> Prescription <span id="pharmRxNo" style="font-family:monospace;color:var(--text-muted)"></span></h3>
+      <button class="modal-close" onclick="Modal.close('pharmRxViewModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="pharmRxBody"></div>
+    <div class="modal-footer" id="pharmRxFooter">
+      <button class="btn btn-outline" onclick="Modal.close('pharmRxViewModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- SALE RECEIPT MODAL -->
+<div class="modal-overlay" id="receiptModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-receipt"></i> Sale Receipt</h3>
+      <button class="modal-close" onclick="Modal.close('receiptModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="receiptBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="Modal.close('receiptModal')">Close</button>
+      <button class="btn btn-primary" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../js/dashboard.js"></script>
+<script>
+let allMeds = [];
+let pharmacyRx = [];
+let posCart = [];
+let posPatients = [];
+
+async function loadDashboard() {
+  const data = await API.get('/pharmacy/stats');
+  const s = data?.success ? data : {total_medicines:0,available:0,low_stock:0,out_of_stock:0,expired:0};
+  document.getElementById('sTotalMeds').textContent = Format.number(s.total_medicines);
+  document.getElementById('sInStock').textContent = Format.number(s.available);
+  document.getElementById('sLowStock').textContent = Format.number(s.low_stock);
+  document.getElementById('sExpiring').textContent = Format.number(s.expired || 0);
+  document.getElementById('lowBadge').textContent = s.low_stock;
+
+  const medsData = await API.get('/pharmacy/medicines?per_page=500');
+  allMeds = medsData?.medicines || [];
+  renderMeds(allMeds);
+  renderCharts();
+}
+
+function renderMeds(meds) {
+  const tbody = document.getElementById('medTableBody');
+  if(!meds.length){setTableEmpty('medTableBody','No medicines found',8);return;}
+  tbody.innerHTML = meds.map(m => {
+    const isLow = m.stock_quantity <= m.min_stock_level && m.stock_quantity > 0;
+    const isExpired = m.status === 'expired' || (m.expiry_date && new Date(m.expiry_date) < new Date());
+    return `<tr${isLow?' style="background:rgba(245,158,11,.04)"':''}${isExpired?' style="background:rgba(239,68,68,.04)"':''}>
+      <td>
+        <div style="font-weight:600">${escapeHtml(m.name)}</div>
+        <div style="font-size:.75rem;color:var(--text-muted)">${escapeHtml(m.generic_name||'—')}</div>
+      </td>
+      <td style="font-size:.82rem">${escapeHtml(m.category||'—')}</td>
+      <td><span class="badge badge-gray">${escapeHtml(m.unit)}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="progress" style="width:60px;height:6px"><div class="progress-bar" style="width:${Math.min(100,(m.stock_quantity/Math.max(m.min_stock_level*3,1))*100)}%;background:${isLow?'var(--danger)':'var(--accent)'}"></div></div>
+          <span style="font-weight:700;color:${isLow?'var(--danger)':'var(--text)'}">${m.stock_quantity}</span>
+        </div>
+      </td>
+      <td style="font-weight:700">${Format.currency(m.sale_price)}</td>
+      <td style="font-size:.8rem;color:${isExpired?'var(--danger)':''}">${m.expiry_date||'—'}</td>
+      <td>${Format.badge(isExpired?'expired':m.status)}${isLow?'<span class="badge badge-warning" style="margin-left:4px">Low</span>':''}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline btn-sm" onclick="editMed(${m.id})" title="Edit"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-primary btn-sm" onclick="restockMed(${m.id})" title="Restock"><i class="fas fa-plus"></i></button>
+        <button class="btn btn-outline btn-sm" onclick="deleteMed(${m.id})" title="Delete" style="color:var(--danger)"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterMeds() {
+  const status = document.getElementById('statusFilter').value;
+  const q = document.getElementById('medSearch').value.toLowerCase();
+  let filtered = allMeds;
+  if(status) filtered = filtered.filter(m => m.status === status || (status==='expired' && m.expiry_date && new Date(m.expiry_date)<new Date()));
+  if(q) filtered = filtered.filter(m => (m.name||'').toLowerCase().includes(q) || (m.generic_name||'').toLowerCase().includes(q) || (m.category||'').toLowerCase().includes(q));
+  renderMeds(filtered);
+}
+
+function searchMeds(q) {
+  const searchEl = document.getElementById('medSearch');
+  if (searchEl) {
+    searchEl.value = q;
+    if (document.getElementById('section-inventory').style.display === 'none') showSection('inventory');
+    filterMeds();
+  }
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderCharts() {
+  if (window._salesChartObj) { window._salesChartObj.destroy(); }
+  if (window._catChartObj) { window._catChartObj.destroy(); }
+  const categories = {};
+  allMeds.forEach(m => { const c = m.category || 'Uncategorized'; categories[c] = (categories[c]||0) + (m.stock_quantity||0); });
+  const catLabels = Object.keys(categories);
+  const catValues = Object.values(categories);
+  window._salesChartObj = new Chart(document.getElementById('salesChart'),{type:'line',data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],datasets:[{label:'Sales (PKR)',data:[0,0,0,0,0,0,0],borderColor:'#0ea5e9',backgroundColor:'rgba(14,165,233,.08)',fill:true,tension:.4,pointRadius:4,pointBackgroundColor:'#0ea5e9'}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'PKR '+(v/1000)+'K'}}}}});
+  window._catChartObj = new Chart(document.getElementById('categoryChart'),{type:'doughnut',data:{labels:catLabels.length?catLabels:['No data'],datasets:[{data:catValues.length?catValues:[1],backgroundColor:['#0ea5e9','#10b981','#f59e0b','#6366f1','#ef4444','#64748b','#a855f7','#14b8a6'],borderWidth:0}]},options:{responsive:true,plugins:{legend:{position:'right'}},cutout:'60%'}});
+}
+
+async function addMedicine() {
+  const payload={name:document.getElementById('mName').value.trim(),generic_name:document.getElementById('mGeneric').value.trim(),category:document.getElementById('mCat').value.trim(),manufacturer:document.getElementById('mMfr').value.trim(),unit:document.getElementById('mUnit').value,strength:document.getElementById('mStrength').value.trim(),purchase_price:parseFloat(document.getElementById('mPurchase').value)||0,sale_price:parseFloat(document.getElementById('mSale').value)||0,stock_quantity:parseInt(document.getElementById('mStock').value)||0,min_stock_level:parseInt(document.getElementById('mMinStock').value)||10,expiry_date:document.getElementById('mExpiry').value||null,batch_no:document.getElementById('mBatch').value.trim(),requires_prescription:document.getElementById('mRx').checked};
+  if(!payload.name){Toast.error('Medicine name required');return;}
+  if(!payload.sale_price){Toast.error('Sale price required');return;}
+  if(payload.stock_quantity < 0){Toast.error('Stock quantity must be 0 or more');return;}
+  const data=await API.post('/pharmacy/medicines',payload);
+  if(data?.success){
+    Toast.success('Medicine added!');
+    Modal.close('addMedModal');
+    document.getElementById('mName').value='';document.getElementById('mGeneric').value='';document.getElementById('mCat').value='';document.getElementById('mMfr').value='';document.getElementById('mStrength').value='';document.getElementById('mPurchase').value='';document.getElementById('mSale').value='';document.getElementById('mStock').value='';document.getElementById('mMinStock').value='10';document.getElementById('mExpiry').value='';document.getElementById('mBatch').value='';document.getElementById('mRx').checked=false;
+    loadDashboard();
+  } else {
+    Toast.error(data?.message || 'Failed to add medicine');
+  }
+}
+
+function editMed(id) {
+  const m = allMeds.find(x => x.id === id);
+  if (!m) { Toast.error('Medicine not found'); return; }
+  document.getElementById('emId').value = m.id;
+  document.getElementById('emName').value = m.name || '';
+  document.getElementById('emGeneric').value = m.generic_name || '';
+  document.getElementById('emCat').value = m.category || '';
+  document.getElementById('emMfr').value = m.manufacturer || '';
+  document.getElementById('emUnit').value = m.unit || 'tablet';
+  document.getElementById('emStrength').value = m.strength || '';
+  document.getElementById('emPurchase').value = m.purchase_price || 0;
+  document.getElementById('emSale').value = m.sale_price || 0;
+  document.getElementById('emStock').value = m.stock_quantity || 0;
+  document.getElementById('emMinStock').value = m.min_stock_level || 10;
+  document.getElementById('emStatus').value = m.status || 'available';
+  document.getElementById('emExpiry').value = m.expiry_date || '';
+  document.getElementById('emRx').checked = !!m.requires_prescription;
+  Modal.open('editMedModal');
+}
+
+async function saveMedEdit() {
+  const id = document.getElementById('emId').value;
+  if (!id) return;
+  const payload = {
+    name: document.getElementById('emName').value.trim(),
+    generic_name: document.getElementById('emGeneric').value.trim(),
+    category: document.getElementById('emCat').value.trim(),
+    manufacturer: document.getElementById('emMfr').value.trim(),
+    unit: document.getElementById('emUnit').value,
+    strength: document.getElementById('emStrength').value.trim(),
+    purchase_price: parseFloat(document.getElementById('emPurchase').value) || 0,
+    sale_price: parseFloat(document.getElementById('emSale').value) || 0,
+    stock_quantity: parseInt(document.getElementById('emStock').value) || 0,
+    min_stock_level: parseInt(document.getElementById('emMinStock').value) || 10,
+    status: document.getElementById('emStatus').value,
+    expiry_date: document.getElementById('emExpiry').value || null,
+    requires_prescription: document.getElementById('emRx').checked
+  };
+  if (!payload.name) { Toast.error('Medicine name required'); return; }
+  if (!payload.sale_price) { Toast.error('Sale price required'); return; }
+  const res = await API.put('/pharmacy/medicines/' + id, payload);
+  if (res?.success) {
+    Toast.success('Medicine updated');
+    Modal.close('editMedModal');
+    loadDashboard();
+  } else {
+    Toast.error(res?.message || 'Failed to update medicine');
+  }
+}
+
+function restockMed(id) {
+  const m = allMeds.find(x => x.id === id);
+  if (!m) { Toast.error('Medicine not found'); return; }
+  document.getElementById('rmId').value = m.id;
+  document.getElementById('rmName').textContent = `${m.name}${m.strength ? ' (' + m.strength + ')' : ''}`;
+  document.getElementById('rmCurrent').textContent = `${m.stock_quantity} ${m.unit}`;
+  document.getElementById('rmQty').value = 10;
+  Modal.open('restockModal');
+  setTimeout(() => document.getElementById('rmQty').focus(), 100);
+}
+
+async function submitRestock() {
+  const id = document.getElementById('rmId').value;
+  const qty = parseInt(document.getElementById('rmQty').value) || 0;
+  if (qty <= 0) { Toast.error('Quantity must be greater than 0'); return; }
+  const res = await API.post('/pharmacy/medicines/' + id + '/restock', { quantity: qty });
+  if (res?.success) {
+    Toast.success(`Added ${qty} units to stock`);
+    Modal.close('restockModal');
+    loadDashboard();
+  } else {
+    Toast.error(res?.message || 'Failed to restock');
+  }
+}
+
+async function deleteMed(id) {
+  if (!confirm('Delete this medicine? This cannot be undone.')) return;
+  const res = await API.delete('/pharmacy/medicines/' + id);
+  if (res?.success) {
+    Toast.success('Medicine deleted');
+    loadDashboard();
+  } else {
+    Toast.error(res?.message || 'Failed to delete');
+  }
+}
+
+function showSection(section) {
+  document.querySelectorAll('.page-section').forEach(el => el.style.display = 'none');
+  const target = document.getElementById('section-' + section);
+  if (target) target.style.display = 'block';
+  document.querySelectorAll('.sidebar-nav .nav-item').forEach(el => el.classList.remove('active'));
+  const nav = document.getElementById('nav-' + section);
+  if (nav) nav.classList.add('active');
+
+  if (section === 'inventory') loadInventory();
+  if (section === 'sale') loadPos();
+  if (section === 'prescriptions') loadPrescriptions();
+  if (section === 'low-stock') loadLowStock();
+  if (section === 'expiring') loadExpiring();
+  if (section === 'reports') loadReports();
+}
+
+async function loadInventory() {
+  if(!allMeds.length) {
+    const medsData = await API.get('/pharmacy/medicines?per_page=500');
+    allMeds = medsData?.medicines || [];
+  }
+  filterMeds();
+}
+
+// ─── POS (New Sale) ────────────────────────────────────
+async function loadPos() {
+  if (!allMeds.length) {
+    const medsData = await API.get('/pharmacy/medicines?per_page=500');
+    allMeds = medsData?.medicines || [];
+  }
+  await loadPosPatients();
+  renderPosMeds();
+  renderPosCart();
+}
+
+async function loadPosPatients() {
+  const res = await API.get('/patients/?per_page=200');
+  const list = res?.patients || [];
+  posPatients = list;
+  const sel = document.getElementById('posPatient');
+  if (sel) {
+    sel.innerHTML = '<option value="">Walk-in Customer</option>' + list.map(p => {
+      const name = `${p.first_name||''} ${p.last_name||''}`.trim() || `Patient #${p.id}`;
+      return `<option value="${p.id}">${escapeHtml(name)} (${escapeHtml(p.mrn||'—')})</option>`;
+    }).join('');
+  }
+}
+
+function renderPosMeds() {
+  const q = (document.getElementById('posSearch')?.value || '').toLowerCase().trim();
+  const list = allMeds.filter(m => m.stock_quantity > 0 && m.status !== 'expired' && m.status !== 'discontinued');
+  const filtered = q ? list.filter(m => (m.name||'').toLowerCase().includes(q) || (m.category||'').toLowerCase().includes(q) || (m.generic_name||'').toLowerCase().includes(q)) : list;
+  const container = document.getElementById('posMedList');
+  if (!container) return;
+  if (!filtered.length) { container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text-muted)">No medicines available</div>'; return; }
+  container.innerHTML = filtered.slice(0, 60).map(m => {
+    const inCart = posCart.find(c => c.id === m.id);
+    return `<div style="border:1.5px solid ${inCart ? 'var(--primary)' : 'var(--light-3)'};border-radius:10px;padding:12px;background:${inCart ? 'rgba(2,132,199,.04)' : 'var(--white)'};transition:all .15s;cursor:pointer" onclick="addToCart(${m.id})">
+      <div style="font-weight:600;font-size:.9rem;margin-bottom:2px">${escapeHtml(m.name)}</div>
+      <div style="font-size:.72rem;color:var(--text-muted);margin-bottom:6px">${escapeHtml(m.category||'—')} · ${escapeHtml(m.strength||m.unit)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-weight:700;color:var(--primary)">${Format.currency(m.sale_price)}</div>
+        <div style="font-size:.72rem;color:${m.stock_quantity <= m.min_stock_level ? 'var(--danger)' : 'var(--text-muted)'}">${m.stock_quantity} in stock</div>
+      </div>
+      ${inCart ? `<div style="margin-top:6px;font-size:.72rem;color:var(--primary);font-weight:600"><i class="fas fa-shopping-cart"></i> ${inCart.quantity} in cart</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function addToCart(id) {
+  const m = allMeds.find(x => x.id === id);
+  if (!m) return;
+  const inCart = posCart.find(c => c.id === id);
+  if (inCart) {
+    if (inCart.quantity + 1 > m.stock_quantity) { Toast.warning('Cannot exceed stock'); return; }
+    inCart.quantity += 1;
+  } else {
+    posCart.push({ id: m.id, name: m.name, unit: m.unit, strength: m.strength, unit_price: parseFloat(m.sale_price), quantity: 1, max_stock: m.stock_quantity });
+  }
+  renderPosMeds();
+  renderPosCart();
+}
+
+function updateCartQty(id, delta) {
+  const item = posCart.find(c => c.id === id);
+  if (!item) return;
+  const newQty = item.quantity + delta;
+  if (newQty <= 0) { posCart = posCart.filter(c => c.id !== id); }
+  else if (newQty > item.max_stock) { Toast.warning('Cannot exceed stock'); return; }
+  else { item.quantity = newQty; }
+  renderPosMeds();
+  renderPosCart();
+}
+
+function removeFromCart(id) { posCart = posCart.filter(c => c.id !== id); renderPosMeds(); renderPosCart(); }
+
+function renderPosCart() {
+  const container = document.getElementById('posCart');
+  if (!posCart.length) {
+    container.innerHTML = '<div style="text-align:center;padding:30px 16px;color:var(--text-muted);font-size:.85rem"><i class="fas fa-shopping-basket" style="font-size:2rem;display:block;margin-bottom:10px;opacity:.3"></i>Cart is empty<br><span style="font-size:.75rem">Click medicines to add</span></div>';
+  } else {
+    container.innerHTML = posCart.map(c => `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--light-3)">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(c.name)}</div>
+        <div style="font-size:.72rem;color:var(--text-muted)">${Format.currency(c.unit_price)} × ${c.quantity} = <strong>${Format.currency(c.unit_price * c.quantity)}</strong></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <button class="btn btn-outline btn-sm" onclick="updateCartQty(${c.id},-1)" style="padding:2px 8px"><i class="fas fa-minus"></i></button>
+        <span style="min-width:24px;text-align:center;font-weight:700">${c.quantity}</span>
+        <button class="btn btn-outline btn-sm" onclick="updateCartQty(${c.id},1)" style="padding:2px 8px"><i class="fas fa-plus"></i></button>
+        <button class="btn btn-outline btn-sm" onclick="removeFromCart(${c.id})" style="padding:2px 8px;color:var(--danger)"><i class="fas fa-times"></i></button>
+      </div>
+    </div>`).join('');
+  }
+  recalcPosTotals();
+}
+
+function recalcPosTotals() {
+  const subtotal = posCart.reduce((s, c) => s + c.unit_price * c.quantity, 0);
+  const discount = parseFloat(document.getElementById('posDiscount').value) || 0;
+  const taxRate = 5;
+  const tax = Math.max(0, (subtotal - discount) * taxRate / 100);
+  const total = Math.max(0, subtotal - discount + tax);
+  document.getElementById('posSubtotal').textContent = Format.currency(subtotal);
+  document.getElementById('posTax').textContent = Format.currency(tax);
+  document.getElementById('posTotal').textContent = Format.currency(total);
+}
+
+async function submitPosSale() {
+  if (!posCart.length) { Toast.warning('Cart is empty'); return; }
+  const btn = document.getElementById('posSubmitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+  const patient_id = document.getElementById('posPatient').value || null;
+  const payment_method = document.getElementById('posPayment').value;
+  const discount = parseFloat(document.getElementById('posDiscount').value) || 0;
+  const payload = {
+    patient_id: patient_id ? parseInt(patient_id) : null,
+    items: posCart.map(c => ({ medicine_id: c.id, quantity: c.quantity })),
+    discount, payment_method, tax_rate: 5,
+    paid_amount: 0
+  };
+  const subtotal = posCart.reduce((s, c) => s + c.unit_price * c.quantity, 0);
+  const tax = Math.max(0, (subtotal - discount) * 5 / 100);
+  payload.paid_amount = subtotal - discount + tax;
+  const res = await API.post('/pharmacy/sales', payload);
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-check-circle"></i> Complete Sale';
+  if (res?.success) {
+    Toast.success('Sale completed! Invoice ' + (res.invoice?.invoice_no || ''));
+    showReceipt(res.invoice);
+    posCart = [];
+    document.getElementById('posDiscount').value = 0;
+    await loadDashboard();
+    await loadPos();
+  } else {
+    Toast.error(res?.message || 'Sale failed');
+  }
+}
+
+function showReceipt(inv) {
+  if (!inv) return;
+  const items = (inv.items||[]).map(i => `<tr><td style="padding:6px 0">${escapeHtml(i.description)}</td><td style="text-align:center">${i.quantity}</td><td style="text-align:right">${Format.currency(i.total_price)}</td></tr>`).join('');
+  const html = `
+    <div style="text-align:center;padding:12px;background:var(--light-2);border-radius:10px;margin-bottom:14px">
+      <div style="font-size:1.2rem;font-weight:700">Hospify Pharmacy</div>
+      <div style="font-size:.75rem;color:var(--text-muted)">Pharmacy Sales Receipt</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:.85rem"><span>Invoice:</span><strong>${escapeHtml(inv.invoice_no)}</strong></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:.85rem"><span>Date:</span><strong>${Format.datetime(inv.created_at)}</strong></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px;font-size:.85rem"><span>Payment:</span><strong>${escapeHtml((inv.payment_method||'').toUpperCase())}</strong></div>
+    <table style="width:100%;font-size:.85rem;border-top:1px solid var(--light-3);border-bottom:1px solid var(--light-3);padding:8px 0">
+      <thead><tr style="font-size:.72rem;color:var(--text-muted)"><th align="left">Item</th><th>Qty</th><th align="right">Total</th></tr></thead>
+      <tbody>${items}</tbody>
+    </table>
+    <div style="margin-top:12px;font-size:.85rem">
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>Subtotal</span><span>${Format.currency(inv.subtotal)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>Discount</span><span>− ${Format.currency(inv.discount||0)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span>Tax</span><span>${Format.currency(inv.tax||0)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;margin-top:6px;border-top:1.5px solid var(--text);font-weight:700;font-size:1.1rem"><span>TOTAL</span><span>${Format.currency(inv.total_amount)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0;color:var(--accent)"><span>Paid</span><span>${Format.currency(inv.paid_amount||0)}</span></div>
+      ${(inv.due_amount||0) > 0 ? `<div style="display:flex;justify-content:space-between;padding:3px 0;color:var(--danger)"><span>Due</span><span>${Format.currency(inv.due_amount)}</span></div>` : ''}
+    </div>
+    <div style="margin-top:18px;text-align:center;font-size:.75rem;color:var(--text-muted)">Thank you for your purchase!</div>
+  `;
+  document.getElementById('receiptBody').innerHTML = html;
+  Modal.open('receiptModal');
+}
+
+// ─── PRESCRIPTIONS ─────────────────────────────────────
+async function loadPrescriptions() {
+  try {
+    setTableLoading('rxTableBody', 6);
+    const data = await API.get('/prescriptions/?per_page=200');
+    pharmacyRx = data?.prescriptions || [];
+    renderPharmacyPrescriptions();
+  } catch(e) { console.error('rx', e); }
+}
+
+function renderPharmacyPrescriptions() {
+  const tbody = document.getElementById('rxTableBody');
+  if (!tbody) return;
+  const q = (document.getElementById('pharmRxSearch')?.value || '').toLowerCase().trim();
+  const status = document.getElementById('pharmRxStatus')?.value || '';
+  let list = pharmacyRx.slice();
+  if (q) list = list.filter(p => (p.prescription_no||'').toLowerCase().includes(q) || ((p.patient?.first_name||'')+' '+(p.patient?.last_name||'')).toLowerCase().includes(q) || (p.doctor_name||'').toLowerCase().includes(q));
+  if (status === 'dispensed') list = list.filter(p => p.is_dispensed);
+  else if (status === 'pending') list = list.filter(p => !p.is_dispensed);
+  if (!list.length) { setTableEmpty('rxTableBody', 'No prescriptions found', 6); return; }
+  tbody.innerHTML = list.map(p => {
+    const pname = p.patient ? `${p.patient.first_name||''} ${p.patient.last_name||''}`.trim() : (p.patient_name||'—');
+    const dname = p.doctor_name || (p.doctor?.name) || `Dr. #${p.doctor_id||'—'}`;
+    return `<tr>
+      <td><code style="font-size:.8rem">${escapeHtml(p.prescription_no||'—')}</code></td>
+      <td style="font-weight:600">${escapeHtml(pname)}</td>
+      <td style="font-size:.82rem">${escapeHtml(dname)}</td>
+      <td style="font-size:.82rem">${Format.date(p.created_at)}</td>
+      <td>${p.is_dispensed ? '<span class="badge badge-success">Dispensed</span>' : '<span class="badge badge-warning">Pending</span>'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline btn-sm" onclick="viewPharmacyPrescription(${p.id})" title="View"><i class="fas fa-eye"></i> View</button>
+        ${!p.is_dispensed ? `<button class="btn btn-primary btn-sm" onclick="dispenseRx(${p.id})" title="Dispense"><i class="fas fa-pills"></i> Dispense</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function viewPharmacyPrescription(id) {
+  const res = await API.get('/prescriptions/' + id);
+  if (!res?.success) { Toast.error('Prescription not found'); return; }
+  showPharmacyRxModal(res.prescription);
+}
+
+function showPharmacyRxModal(rx) {
+  document.getElementById('pharmRxNo').textContent = '#' + (rx.prescription_no||'—');
+  const pname = rx.patient ? `${rx.patient.first_name||''} ${rx.patient.last_name||''}`.trim() : '—';
+  const dname = rx.doctor_name || (rx.doctor?.name) || '—';
+  const items = (rx.items||[]).map((it,i) => `<tr>
+    <td>${i+1}</td>
+    <td style="font-weight:600">${escapeHtml(it.medicine_name||'—')}</td>
+    <td>${escapeHtml(it.dosage||'—')}</td>
+    <td>${escapeHtml(it.frequency||'—')}</td>
+    <td>${escapeHtml(it.duration||'—')}</td>
+  </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No medicines</td></tr>';
+  document.getElementById('pharmRxBody').innerHTML = `
+    <div style="background:var(--light-2);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><div style="font-size:.75rem;color:var(--text-muted)">Patient</div><div style="font-weight:600">${escapeHtml(pname)}</div></div>
+        <div><div style="font-size:.75rem;color:var(--text-muted)">MRN</div><div style="font-weight:600">${escapeHtml(rx.patient?.mrn||'—')}</div></div>
+        <div><div style="font-size:.75rem;color:var(--text-muted)">Doctor</div><div style="font-weight:600">${escapeHtml(dname)}</div></div>
+        <div><div style="font-size:.75rem;color:var(--text-muted)">Date</div><div style="font-weight:600">${Format.date(rx.created_at)}</div></div>
+      </div>
+    </div>
+    ${rx.diagnosis?`<div style="margin-bottom:10px"><strong>Diagnosis:</strong> ${escapeHtml(rx.diagnosis)}</div>`:''}
+    ${rx.advice?`<div style="margin-bottom:10px"><strong>Advice:</strong> ${escapeHtml(rx.advice)}</div>`:''}
+    <h4 style="margin:12px 0 8px">Medicines to Dispense</h4>
+    <div class="table-container">
+      <table>
+        <thead><tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th></tr></thead>
+        <tbody>${items}</tbody>
+      </table>
+    </div>
+    ${rx.is_dispensed ? '<div style="margin-top:10px;padding:8px 12px;background:rgba(16,185,129,.1);border-left:3px solid var(--accent);border-radius:6px;font-size:.85rem"><i class="fas fa-check-circle" style="color:var(--accent)"></i> Already dispensed on ' + Format.date(rx.dispensed_at||rx.created_at) + '</div>' : ''}
+  `;
+  const footer = document.getElementById('pharmRxFooter');
+  footer.innerHTML = !rx.is_dispensed
+    ? `<button class="btn btn-outline" onclick="Modal.close('pharmRxViewModal')">Close</button><button class="btn btn-primary" onclick="Modal.close('pharmRxViewModal');dispenseRx(${rx.id})"><i class="fas fa-pills"></i> Dispense</button>`
+    : `<button class="btn btn-outline" onclick="Modal.close('pharmRxViewModal')">Close</button>`;
+  Modal.open('pharmRxViewModal');
+}
+
+async function dispenseRx(id) {
+  if (!confirm('Mark this prescription as dispensed?\n\nThis will record the dispensing action in the audit log.')) return;
+  const res = await API.post('/prescriptions/' + id + '/dispense', {});
+  if (res?.success) {
+    Toast.success('Prescription dispensed successfully');
+    loadPrescriptions();
+  } else {
+    Toast.error(res?.message || 'Failed to dispense');
+  }
+}
+
+// ─── LOW STOCK & EXPIRING ──────────────────────────────
+async function loadLowStock() {
+  if(!allMeds.length) {
+    const medsData = await API.get('/pharmacy/medicines?per_page=500');
+    allMeds = medsData?.medicines || [];
+  }
+  const low = allMeds.filter(m => m.stock_quantity <= m.min_stock_level);
+  const tbody = document.getElementById('lowStockTableBody');
+  if(!low.length) { setTableEmpty('lowStockTableBody','No low stock items',5); return; }
+  tbody.innerHTML = low.map(m => `<tr>
+    <td><div style="font-weight:600">${escapeHtml(m.name)}</div><div style="font-size:.75rem;color:var(--text-muted)">${escapeHtml(m.generic_name||'—')}</div></td>
+    <td style="font-size:.82rem">${escapeHtml(m.category||'—')}</td>
+    <td><span style="font-weight:700;color:var(--danger)">${m.stock_quantity}</span> ${escapeHtml(m.unit)}</td>
+    <td>${m.min_stock_level}</td>
+    <td><button class="btn btn-primary btn-sm" onclick="restockMed(${m.id})"><i class="fas fa-plus"></i> Restock</button></td>
+  </tr>`).join('');
+}
+
+async function loadExpiring() {
+  if(!allMeds.length) {
+    const medsData = await API.get('/pharmacy/medicines?per_page=500');
+    allMeds = medsData?.medicines || [];
+  }
+  const cutoff = new Date(new Date().setDate(new Date().getDate() + 90));
+  const expiring = allMeds.filter(m => m.status === 'expired' || (m.expiry_date && new Date(m.expiry_date) < cutoff));
+  const tbody = document.getElementById('expiringTableBody');
+  if(!expiring.length) { setTableEmpty('expiringTableBody','No expiring items',5); return; }
+  tbody.innerHTML = expiring.map(m => {
+    const isExpired = m.status === 'expired' || (m.expiry_date && new Date(m.expiry_date) < new Date());
+    return `<tr>
+      <td><div style="font-weight:600">${escapeHtml(m.name)}</div></td>
+      <td style="font-size:.82rem">${escapeHtml(m.batch_no||'—')}</td>
+      <td>${m.stock_quantity} ${escapeHtml(m.unit)}</td>
+      <td style="font-weight:600;color:${isExpired?'var(--danger)':'var(--warning)'}">${m.expiry_date||'—'} ${isExpired?'(Expired)':''}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="editMed(${m.id})"><i class="fas fa-edit"></i> Update</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── REPORTS ───────────────────────────────────────────
+async function loadReports() {
+  const data = await API.get('/pharmacy/sales/reports');
+  if (!data?.success) { Toast.error('Failed to load reports'); return; }
+  document.getElementById('rToday').textContent = Format.currency(data.today_revenue);
+  document.getElementById('rWeek').textContent = Format.currency(data.week_revenue);
+  document.getElementById('rMonth').textContent = Format.currency(data.month_revenue);
+  document.getElementById('rInvoices').textContent = Format.number(data.total_invoices);
+
+  if (window._reportChartObj) window._reportChartObj.destroy();
+  const daily = data.daily || [];
+  window._reportChartObj = new Chart(document.getElementById('reportSalesChart'), {
+    type: 'bar',
+    data: {
+      labels: daily.map(d => d.label),
+      datasets: [{
+        label: 'Revenue (PKR)',
+        data: daily.map(d => d.total),
+        backgroundColor: 'rgba(2,132,199,.7)',
+        borderRadius: 6,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { ticks: { callback: v => 'PKR ' + (v/1000).toFixed(0) + 'K' }, beginAtZero: true } }
+    }
+  });
+
+  const topBody = document.getElementById('topMedsBody');
+  const top = data.top_medicines || [];
+  if (!top.length) { topBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted)">No sales recorded yet</td></tr>'; }
+  else { topBody.innerHTML = top.map((m, i) => `<tr><td>${i+1}</td><td style="font-weight:600">${escapeHtml(m.name)}</td><td>${m.quantity}</td><td style="font-weight:700;color:var(--primary)">${Format.currency(m.revenue)}</td></tr>`).join(''); }
+
+  await loadRecentSales();
+}
+
+async function loadRecentSales() {
+  setTableLoading('recentSalesBody', 7);
+  const res = await API.get('/pharmacy/sales/recent?per_page=20');
+  const list = res?.invoices || [];
+  const tbody = document.getElementById('recentSalesBody');
+  if (!list.length) { setTableEmpty('recentSalesBody', 'No sales recorded yet', 7); return; }
+  tbody.innerHTML = list.map(inv => `<tr>
+    <td><code style="font-size:.8rem">${escapeHtml(inv.invoice_no||'—')}</code></td>
+    <td>${escapeHtml(inv.patient_name || 'Walk-in')}${inv.patient_mrn ? ` <span style="font-size:.72rem;color:var(--text-muted)">(${escapeHtml(inv.patient_mrn)})</span>` : ''}</td>
+    <td>${(inv.items||[]).length} item(s)</td>
+    <td style="font-weight:700">${Format.currency(inv.total_amount)}</td>
+    <td style="font-size:.82rem;text-transform:capitalize">${escapeHtml(inv.payment_method||'—')}</td>
+    <td>${Format.badge(inv.payment_status)}</td>
+    <td style="font-size:.82rem">${Format.datetime(inv.created_at)}</td>
+  </tr>`).join('');
+}
+
+Auth.require();
+loadDashboard();
+</script>
+</body>
+</html>
